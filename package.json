@@ -1,0 +1,11 @@
+{
+  "name": "notequest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Gamified sight-reading trainer for acoustic piano. Phase 0: microphone detection test page.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "npx --yes serve -l 5173 ."
+  }
+}
