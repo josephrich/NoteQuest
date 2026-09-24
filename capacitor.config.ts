@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // it must match the one registered in App Store Connect.
 const config: CapacitorConfig = {
   appId: 'com.josephrich.notequest',
-  appName: 'NoteQuest',
+  appName: 'Clefwing',
   webDir: 'dist',
   ios: {
     contentInset: 'never',

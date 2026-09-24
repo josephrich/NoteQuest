@@ -1,4 +1,6 @@
-# NoteQuest
+# Clefwing
+
+<img src="public/logo-mark.svg" alt="Clefwing logo: a treble clef with dragon wings" height="120">
 
 A Duolingo-style note-reading game for a young pianist, built for a **normal acoustic piano**: the
 iPad sits on the music stand and listens through its microphone. No MIDI needed.
@@ -75,6 +77,15 @@ use the deployed site or an https tunnel.
 
 Field test on an iPad and an acoustic piano: 0 misjudged notes out of 41 and 0 misjudged chords out
 of 34. Median detection time was 67 ms for notes and 117 ms for chords.
+
+## Logo and icons
+
+The logo is a treble clef (the real Bravura font outline) with a pair of dragon wings, in gold on
+deep violet. Everything is generated from `scripts/brand/design.mjs`:
+
+```bash
+node scripts/brand/render.mjs   # rewrites public/ logo + icons and the iOS app icon/launch screen
+```
 
 ## Layout
 

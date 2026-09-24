@@ -1,6 +1,7 @@
 // First-run setup: the player's name (kept on this device only), naming the dragon, and a mic check.
 import { useEffect, useState } from 'react';
 import { Dragon } from './Dragon';
+import { Logo } from './Logo';
 import { useProgress } from './store';
 import { listener } from '../engine/listener';
 import { midiName } from '../engine/music';
@@ -51,8 +52,10 @@ export function Welcome() {
             if (name.trim()) setStep('dragon');
           }}
         >
-          <Dragon mood="happy" size={180} />
-          <h1>Welcome to NoteQuest!</h1>
+          <h1 className="welcome-logo" aria-label="Welcome to Clefwing!">
+            <Logo size={72} />
+          </h1>
+          <Dragon mood="happy" size={160} />
           <label className="field">
             <span>What's your name?</span>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={20} autoComplete="off" />

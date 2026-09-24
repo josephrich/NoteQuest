@@ -58,6 +58,10 @@ h1, h2 { margin: 0; line-height: 1.15; }
 .btn-icon { font-size: 1.4rem; width: 48px; padding: 0; }
 
 /* ---------- welcome ---------- */
+.logo { display: inline-flex; align-items: center; gap: calc(var(--logo-size) * 0.14); }
+.logo-mark { height: calc(var(--logo-size) * 1.35); width: auto; }
+.logo-word { font-weight: 900; font-size: var(--logo-size); letter-spacing: -0.02em; line-height: 1; background: linear-gradient(180deg, #5a3ee0, #2c1577); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.welcome-logo { margin-bottom: -4px; }
 .welcome { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
 .welcome-card { width: 100%; max-width: 520px; display: grid; justify-items: center; gap: 16px; text-align: center; }
 .welcome-card h1 { font-size: 1.8rem; }

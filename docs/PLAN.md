@@ -1,4 +1,4 @@
-# NoteQuest: product plan
+# Clefwing: product plan
 
 ## The problem
 

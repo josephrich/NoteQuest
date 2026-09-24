@@ -1,4 +1,4 @@
-# Publishing NoteQuest to the App Store
+# Publishing Clefwing to the App Store
 
 The plan is to wrap the same web app with [Capacitor](https://capacitorjs.com/), not rewrite it.
 Capacitor packages the built `dist/` folder inside a native iOS app, so the game runs offline, and
@@ -40,13 +40,13 @@ For TestFlight: **Product › Archive › Distribute App › App Store Connect**
   behind a parental gate.
 - **Privacy**: "Data Not Collected" nutrition label. A privacy policy URL is still required; one
   short page saying nothing is collected is enough. It could live on GitHub Pages.
-- **Name**: check that "NoteQuest" is available on the App Store and isn't a trademark conflict.
-  Have a backup name ready.
+- **Name**: "Clefwing: Piano Note Reading" ("NoteQuest" was already taken). Worth a free search on
+  IP Australia's trademark database before investing heavily in the name.
 - **Listing text**: avoid presenting the app as official AMEB material. Saying it "helps with
   note reading for AMEB and other grade exams" is safer than using the AMEB name or logo.
 - **Screenshots**: iPad 13" (2064×2752) at minimum, plus iPhone sizes if you ship the iPhone version too.
 - **Review risk (Guideline 4.2, minimum functionality)**: web wrappers are rejected when they feel
-  like a website. NoteQuest works offline, uses the microphone, and has native storage and (later)
+  like a website. Clefwing works offline, uses the microphone, and has native storage and (later)
   notifications, which is enough.
 
 ## Worth adding once it's native

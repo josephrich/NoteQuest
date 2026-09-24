@@ -320,7 +320,7 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
                 onChange={async (e) => {
                   const on = e.target.checked;
                   if (on && !(await requestReminderPermission())) {
-                    window.alert('Notifications are turned off for NoteQuest. You can allow them in Settings › Notifications.');
+                    window.alert('Notifications are turned off for Clefwing. You can allow them in Settings › Notifications.');
                     return;
                   }
                   setSettings({ reminders: on });

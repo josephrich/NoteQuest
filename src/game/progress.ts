@@ -1,4 +1,4 @@
-// Everything NoteQuest remembers, stored only on this device. Pure functions so they can be tested.
+// Everything Clefwing remembers, stored only on this device. Pure functions so they can be tested.
 import { LESSON_ORDER, REVIEW_ID, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
 import type { ChestRoll } from './rewards';

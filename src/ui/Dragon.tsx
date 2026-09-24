@@ -1,4 +1,4 @@
-// The NoteQuest dragon. Moods change the face and animation; skins and accessories come from the shop.
+// The Clefwing dragon. Moods change the face and animation; skins and accessories come from the shop.
 import type { ReactElement } from 'react';
 import type { Slot } from '../game/shop';
 
