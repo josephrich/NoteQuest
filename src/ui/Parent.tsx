@@ -7,6 +7,7 @@ import { dayKey, initialProgress } from '../game/progress';
 import { itemClef, itemNote, type ItemId } from '../game/content';
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
+import { remindersSupported, requestReminderPermission } from '../platform/reminders';
 import type { Screen } from './App';
 
 function Gate({ onPass, onCancel }: { onPass: () => void; onCancel: () => void }) {
@@ -310,6 +311,37 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <label className="check">
           <input type="checkbox" checked={progress.settings.sound} onChange={(e) => setSettings({ sound: e.target.checked })} /> Sound effects
         </label>
+        {remindersSupported && (
+          <div className="row">
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={progress.settings.reminders}
+                onChange={async (e) => {
+                  const on = e.target.checked;
+                  if (on && !(await requestReminderPermission())) {
+                    window.alert('Notifications are turned off for NoteQuest. You can allow them in Settings › Notifications.');
+                    return;
+                  }
+                  setSettings({ reminders: on });
+                }}
+              />{' '}
+              Daily practice reminder at
+            </label>
+            <select
+              value={progress.settings.reminderAt}
+              onChange={(e) => setSettings({ reminderAt: Number(e.target.value) })}
+              aria-label="Reminder time"
+              className="reminder-time"
+            >
+              {Array.from({ length: 15 }, (_, i) => 14 * 60 + i * 30).map((m) => (
+                <option key={m} value={m}>
+                  {new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </section>
 
       <section className="card">

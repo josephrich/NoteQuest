@@ -1,6 +1,7 @@
 // App-wide progress state, persisted to this device.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { loadProgress, saveProgress, type Progress } from '../game/progress';
+import { currentStreak, goalMs, loadProgress, saveProgress, today, type Progress } from '../game/progress';
+import { updateReminder } from '../platform/reminders';
 import { listener } from '../engine/listener';
 
 interface Store {
@@ -17,6 +18,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveProgress(progress);
     listener.setRefA4(progress.settings.refA4);
+    const now = new Date();
+    void updateReminder({
+      enabled: progress.settings.reminders,
+      at: progress.settings.reminderAt,
+      goalDoneToday: today(progress, now).ms >= goalMs(progress),
+      dragonName: progress.profile?.dragonName ?? 'Your dragon',
+      streak: currentStreak(progress, now),
+    });
   }, [progress]);
 
   return <Ctx.Provider value={{ progress, update }}>{children}</Ctx.Provider>;

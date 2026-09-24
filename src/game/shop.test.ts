@@ -98,3 +98,17 @@ describe('published chest odds', () => {
     for (const o of CHEST_ODDS) expect((counts[o.rarity] ?? 0) / 100).toBeCloseTo(o.chance, 0);
   });
 });
+
+describe('practice reminders', () => {
+  test('next reminder is today, or tomorrow if the time has passed or the goal is done', async () => {
+    const { nextReminderTime, reminderText } = await import('../platform/reminders');
+    const at = 17 * 60 + 30;
+    const morning = new Date(2026, 8, 24, 9, 0);
+    const evening = new Date(2026, 8, 24, 19, 0);
+    expect(nextReminderTime(morning, at, false)).toEqual(new Date(2026, 8, 24, 17, 30));
+    expect(nextReminderTime(morning, at, true)).toEqual(new Date(2026, 8, 25, 17, 30));
+    expect(nextReminderTime(evening, at, false)).toEqual(new Date(2026, 8, 25, 17, 30));
+    expect(reminderText('Ember', 5).title).toContain('5-day streak');
+    expect(reminderText('Ember', 0).title).toContain('Ember');
+  });
+});

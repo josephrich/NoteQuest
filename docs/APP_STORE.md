@@ -18,25 +18,20 @@ native features (storage, notifications, and later native audio) can be added as
 
 ## Steps (on your Mac, with Xcode installed)
 
-1. **Join the Apple Developer Program**: US$99/year (A$149). As a sole trader you can enrol as an
-   individual, and your personal name then shows as the seller. Enrolling as an organisation needs
-   a D-U-N-S number and a registered business.
-2. Add Capacitor:
-   ```bash
-   npm install @capacitor/core @capacitor/ios @capacitor/preferences
-   npm install -D @capacitor/cli
-   npx cap init NoteQuest com.yourname.notequest --web-dir dist
-   npm run build && npx cap add ios
-   ```
-3. In `ios/App/App/Info.plist` add the microphone permission text:
-   `NSMicrophoneUsageDescription` = "NoteQuest listens to your piano so it can tell which notes you play."
-4. **Storage**: point `src/platform/storage.ts` at `@capacitor/preferences`. iOS can clear a web
-   view's localStorage when space is low, but it won't clear native app storage. Preferences is
-   async, so load it once at startup and write through on every change.
-5. **App icon**: export a 1024×1024 PNG of the dragon with no transparency (generate it the same
-   way as `public/icon-512.png`).
-6. `npx cap open ios`, set the signing team, and run on the iPad. Then *Product › Archive* uploads
-   to App Store Connect. Use **TestFlight** to put it on the family iPad before public release.
+Already set up in the repo:
+- Capacitor 8 iOS project in `ios/` (Swift Package Manager, so no CocoaPods), bundle ID `com.josephrich.notequest` (change it in `capacitor.config.ts` and Xcode if you like)
+- The microphone permission text, with export compliance set to "no encryption" in `Info.plist`
+- Native storage (`@capacitor/preferences`) and daily practice reminders (`@capacitor/local-notifications`, switched on by a grown-up in Settings)
+- The dragon app icon (1024×1024, no transparency) and launch screen
+
+Each time you want to build:
+```bash
+git pull
+npm install
+npm run ios      # builds the web app, copies it into ios/, and opens Xcode
+```
+In Xcode: select the **App** target, open **Signing & Capabilities**, choose your team, plug in the iPad and press ▶.
+For TestFlight: **Product › Archive › Distribute App › App Store Connect**.
 
 ## App Store Connect checklist
 

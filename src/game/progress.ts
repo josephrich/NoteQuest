@@ -22,7 +22,8 @@ export interface Progress {
   streak: { count: number; lastDay: string | null; freezes: number; best: number };
   lessons: Record<string, { completed: number; bestAccuracy: number }>;
   items: Record<ItemId, ItemStat>;
-  settings: { refA4: number; dailyGoalMin: number; sound: boolean };
+  // reminderAt is minutes after midnight (iOS app only).
+  settings: { refA4: number; dailyGoalMin: number; sound: boolean; reminders: boolean; reminderAt: number };
   shop: ShopState;
   // Real-world prizes a grown-up has set up, and the ones he has claimed.
   prizes: Prize[];
@@ -42,7 +43,7 @@ export function initialProgress(refA4 = 440): Progress {
     streak: { count: 0, lastDay: null, freezes: 1, best: 0 },
     lessons: {},
     items: {},
-    settings: { refA4, dailyGoalMin: 10, sound: true },
+    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30 },
     shop: initialShop(),
     prizes: [],
     claims: [],
