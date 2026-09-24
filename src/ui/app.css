@@ -166,6 +166,9 @@ h1, h2 { margin: 0; line-height: 1.15; }
 
 .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; max-width: 620px; }
 .btn-answer { font-size: 2rem; min-height: 84px; border: 2px solid var(--line); box-shadow: 0 5px 0 var(--line); }
+.answers-words { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.answers-words .btn-answer { font-size: 1.1rem; min-height: 72px; white-space: nowrap; padding: 0 8px; }
+.start-hint { margin: 0; font-size: 1.15rem; }
 .btn-answer.right { background: var(--good-soft); border-color: var(--good); color: var(--good-dark); box-shadow: 0 5px 0 var(--good); opacity: 1; }
 .btn-answer.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad-dark); box-shadow: 0 5px 0 var(--bad); opacity: 1; }
 

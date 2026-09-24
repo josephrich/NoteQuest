@@ -5,8 +5,8 @@ import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
-import { findLesson, itemClef, itemLetter, itemMidi, itemNote, noteTip } from '../game/content';
-import { buildLesson, type Challenge, type ItemStat } from '../game/lesson';
+import { INTERVAL_TIPS, findLesson, intervalLabel, intervalWord, itemClef, itemLetter, itemMidi, itemNote, noteTip } from '../game/content';
+import { buildLesson, challengeAnswer, type Challenge, type ItemStat } from '../game/lesson';
 import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview } from '../game/review';
 import { LessonRun, type Feedback } from '../game/run';
 import { finishLesson } from '../game/progress';
@@ -38,7 +38,8 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const advanceTimer = useRef<number | undefined>(undefined);
 
   const c = run.current;
-  const listening = mic && run.phase === 'asking' && c && c.kind !== 'name';
+  const tapToAnswer = c && (c.kind === 'name' || c.kind === 'interval');
+  const listening = mic && run.phase === 'asking' && c && !tapToAnswer;
 
   const finish = () => {
     const outcome = run.outcome(progress.commonChests);
@@ -81,10 +82,10 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
       const parts = [];
       if (fb.xp) parts.push(`+${fb.xp} XP`);
       if (fb.comboBonus) parts.push(`🔥 ${run.combo} in a row!`);
-      setMessage({ title: c.kind === 'meet' ? `That's ${itemLetter(c.items[0])}!` : fb.lightning ? `⚡ ${lightningLine()}` : praise(), sub: parts.join(' · ') });
+      setMessage({ title: c.kind === 'meet' ? `That's ${c.interval ? intervalWord(c.interval) : itemLetter(c.items[0])}!` : fb.lightning ? `⚡ ${lightningLine()}` : praise(), sub: parts.join(' · ') });
       advanceTimer.current = window.setTimeout(advance, 1100);
     } else if (!fb.correct) {
-      if (c.kind === 'name') sfx.wrong();
+      if (c.kind === 'name' || c.kind === 'interval') sfx.wrong();
       setShake((n) => n + 1);
     }
     rerender();
@@ -115,11 +116,26 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   if (!c) return null;
   const expected = run.expected;
   const clef = itemClef(c.items[0]);
-  const colors = c.kind === 'burst' ? c.items.map((_, i) => (i < run.step ? (run.stepResults[i] ? COLORS.done : COLORS.missed) : i === run.step ? COLORS.current : undefined)) : undefined;
+  const stepwise = c.items.length > 1 && !tapToAnswer;
+  const colors = stepwise ? c.items.map((_, i) => (i < run.step ? (run.stepResults[i] ? COLORS.done : COLORS.missed) : i === run.step ? COLORS.current : undefined)) : undefined;
   const prompt =
-    c.kind === 'meet' ? 'New note!' : c.kind === 'name' ? 'What note is this?' : c.kind === 'burst' ? 'Play these notes in order' : 'Play this note';
+    c.kind === 'meet'
+      ? c.interval
+        ? 'New jump!'
+        : 'New note!'
+      : c.kind === 'name'
+        ? 'What note is this?'
+        : c.kind === 'interval'
+          ? 'How far apart are they?'
+          : c.startHint
+            ? 'Play both notes'
+            : c.kind === 'burst'
+              ? 'Play these notes in order'
+              : 'Play this note';
   const wrong = run.feedback && !run.feedback.correct ? run.feedback : null;
+  // The note to play right now (for hints), and the full answer for tap challenges and reveals.
   const answer = itemLetter(expected);
+  const fullAnswer = tapToAnswer ? challengeAnswer(c) : answer;
 
   return (
     <div className="lesson" style={{ ['--unit' as string]: setup.color }}>
@@ -139,21 +155,27 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
         <h1 className="prompt">{prompt}</h1>
 
         <div key={shake} className={`staff-card ${wrong && run.phase === 'asking' ? 'shake' : ''}`} data-expected={itemMidi(expected)}>
-          <Staff clef={clef} groups={c.items.map((id) => [itemNote(id)])} colors={colors} label={c.kind === 'burst' ? 'Three notes' : `${answer}`} />
-          {c.kind === 'meet' && <div className="meet-name">{answer}</div>}
+          <Staff
+            clef={clef}
+            groups={c.items.map((id) => [itemNote(id)])}
+            colors={colors}
+            label={c.items.length > 1 ? `${c.items.length} notes` : `${answer}`}
+          />
+          {c.kind === 'meet' && <div className="meet-name">{c.interval ? intervalLabel(c.interval) : answer}</div>}
         </div>
 
         {c.kind === 'meet' && (
           <div className="meet">
             <MyDragon mood="think" size={72} />
-            <p>{noteTip(c.items[0])}</p>
+            <p>{c.interval ? INTERVAL_TIPS[c.interval] : noteTip(c.items[0])}</p>
           </div>
         )}
 
-        {c.kind === 'name' && (
-          <div className="answers">
+        {tapToAnswer && (
+          <div className={`answers ${c.kind === 'interval' ? 'answers-words' : ''}`}>
             {c.options!.map((o) => {
-              const state = run.phase === 'wrong' ? (o === answer ? 'right' : o === tapped ? 'wrong' : '') : run.phase === 'correct' && o === answer ? 'right' : '';
+              const state =
+                run.phase === 'wrong' ? (o === fullAnswer ? 'right' : o === tapped ? 'wrong' : '') : run.phase === 'correct' && o === fullAnswer ? 'right' : '';
               return (
                 <button
                   key={o}
@@ -171,7 +193,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
           </div>
         )}
 
-        {c.kind !== 'name' && run.phase === 'asking' && (
+        {!tapToAnswer && run.phase === 'asking' && (
           <div className="listen">
             {mic ? (
               <div className="mic" ref={levelRef}>
@@ -185,12 +207,17 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
                   <i />
                   <i />
                 </span>
-                <span>{c.kind === 'meet' ? 'Play it on your piano' : 'Listening…'}</span>
+                <span>{c.kind === 'meet' ? (c.items.length > 1 ? 'Play them on your piano' : 'Play it on your piano') : 'Listening…'}</span>
               </div>
             ) : null}
             {wrong && (
               <p className="try-again" role="status">
                 {wrong.octaveSlip ? 'Right letter, wrong octave! Look where it sits.' : `That was ${wrong.heard}. ${encourage()}`}
+              </p>
+            )}
+            {c.startHint && !wrong && (
+              <p className="start-hint">
+                It starts on <strong>{itemLetter(c.items[0])}</strong>. Then read the jump!
               </p>
             )}
             {c.kind !== 'meet' && run.tries >= 2 && <p className="hint">Hint: it's {answer}</p>}
@@ -217,7 +244,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
       {(run.phase === 'wrong' || run.phase === 'reveal') && (
         <footer className="sheet-feedback bad" role="status">
           <div>
-            <div className="fb-title">{run.phase === 'wrong' ? `Not quite, it's ${answer}` : `It's ${answer}!`}</div>
+            <div className="fb-title">{run.phase === 'wrong' ? `Not quite, it's ${c.kind === 'interval' ? intervalWord(c.interval!) : fullAnswer}` : `It's ${fullAnswer}!`}</div>
             <div className="fb-sub">{run.phase === 'wrong' ? "We'll try that one again later." : 'Look for it next time.'}</div>
           </div>
           <button className="btn btn-bad" onClick={advance}>

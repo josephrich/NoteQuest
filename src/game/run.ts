@@ -1,13 +1,13 @@
 // The rules of a lesson in progress: judging answers, XP, combos and retries.
 // Kept free of React and audio so it can be unit tested.
-import { itemLetter, itemMidi, type ItemId } from './content';
-import { nameOptions, type Challenge } from './lesson';
+import { intervalItem, itemMidi, type ItemId } from './content';
+import { challengeAnswer, nameOptions, type Challenge } from './lesson';
 import type { LessonOutcome } from './progress';
 import { rollChest } from './rewards';
 
 export const XP = { name: 1, play: 2, burstNote: 1, lightning: 1, comboBonus: 2, complete: 5, perfect: 5 } as const;
 // A reading faster than this earns a lightning bonus.
-export const LIGHTNING_MS = { name: 1500, play: 2000, burstNote: 1800 } as const;
+export const LIGHTNING_MS = { name: 1500, interval: 2000, play: 2000, burstNote: 1800 } as const;
 const MAX_PLAY_TRIES = 3;
 const MAX_REQUEUES = 3;
 // Time counted towards the daily goal per challenge is capped, so wandering off doesn't count.
@@ -76,36 +76,43 @@ export class LessonRun {
   // The note he should be playing right now.
   get expected(): ItemId {
     const c = this.current;
-    // Once a burst is finished `step` points past the end; keep showing its last note.
-    return c.kind === 'burst' ? c.items[Math.min(this.step, c.items.length - 1)] : c.items[0];
+    // Bursts and two-note 'meet' cards go note by note. Once finished, `step` points past the end;
+    // keep showing the last note.
+    return c.items[Math.min(this.step, c.items.length - 1)];
   }
 
   // A detected note (MIDI number) at time `t`.
   play(midi: number, t: number): Feedback | null {
     if (this.phase !== 'asking') return null;
     const c = this.current;
-    if (c.kind === 'name') return null;
+    if (c.kind === 'name' || c.kind === 'interval') return null;
     const target = itemMidi(this.expected);
     const correct = midi === target;
     if (c.kind === 'meet') {
       if (!correct) return null; // meeting a note is never marked wrong
+      if (this.step < c.items.length - 1) {
+        this.stepResults[this.step] = true;
+        this.step++;
+        this.feedback = { correct: true, xp: 0, lightning: false, comboBonus: false };
+        return this.feedback;
+      }
       return this.succeed(t, 0, false);
     }
     if (c.kind === 'play') return this.judgePlay(midi, target, t);
     return this.judgeBurst(midi, target, t);
   }
 
-  // A tapped letter for 'name' challenges, or "Got it" on a 'meet' card.
+  // A tapped answer for 'name' (a letter) and 'interval' challenges, or "Got it" on a 'meet' card.
   tap(letter: string | null, t: number): Feedback | null {
     if (this.phase !== 'asking') return null;
     const c = this.current;
     if (c.kind === 'meet') return this.succeed(t, 0, false);
-    if (c.kind !== 'name' || letter === null) return null;
-    const id = c.items[0];
+    if ((c.kind !== 'name' && c.kind !== 'interval') || letter === null) return null;
+    const id = c.kind === 'interval' ? intervalItem(c.interval!) : c.items[0];
     const ms = t - this.shownAt;
-    if (letter === itemLetter(id)) {
+    if (letter === challengeAnswer(c)) {
       this.record(id, true, ms);
-      const lightning = ms < LIGHTNING_MS.name;
+      const lightning = ms < (c.kind === 'interval' ? LIGHTNING_MS.interval : LIGHTNING_MS.name);
       return this.succeed(t, XP.name + (lightning ? XP.lightning : 0), lightning);
     }
     this.record(id, false, null);
@@ -113,7 +120,7 @@ export class LessonRun {
     this.scored++;
     this.phase = 'wrong';
     this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, heard: letter };
-    this.requeue(id);
+    this.requeue(c);
     this.addActive(t);
     return this.feedback;
   }
@@ -239,10 +246,11 @@ export class LessonRun {
     this.answers.push({ id, correct, ms });
   }
 
-  private requeue(id: ItemId) {
+  private requeue(c: Challenge) {
     if (this.requeues >= MAX_REQUEUES) return;
     this.requeues++;
-    this.queue = [...this.queue, { kind: 'name', items: [id], options: nameOptions(id, this.rnd) }];
+    const again = c.kind === 'name' ? { ...c, options: nameOptions(c.items[0], this.rnd) } : { ...c };
+    this.queue = [...this.queue, again];
   }
 
   private addActive(t: number) {

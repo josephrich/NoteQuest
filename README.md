@@ -15,8 +15,13 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
 
 - **Onboarding**: the player's name and a name for their dragon (both kept on the device only),
   plus a quick "play any note" mic check.
-- **Path of lessons** in four units: Treble Landmarks, Bass Landmarks, Both Hands and Ledger Lines.
-  New notes are taught relative to landmark notes (middle C, the G line, the F line, treble and bass C).
+- **Path of lessons** in five units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines, and
+  Steps, Skips & Leaps. New notes are taught relative to landmark notes (middle C, the G line, the F
+  line, treble and bass C).
+- **Interval reading** (Unit 5): the skill that stops note-by-note decoding. Steps (line to space),
+  skips (line to line), 4ths, 5ths and octaves, in both clefs. He names the jump between two notes,
+  plays a pair when told only the first note, and plays short four-note melodies built from the
+  jumps he knows.
 - **Challenge types**:
   - *Meet the note*: a tip explaining where the note sits
   - *What note is this?*: tap the letter
@@ -45,6 +50,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   - Per-note reading speed
   - Piano tuning
   - Settings and reset
+  - **Unlock every lesson**: lets him skip ahead, or lets a tester try later units
 - The original **mic test page** is at `/mic-test.html` for troubleshooting.
 
 Progress lives in Safari's local storage on the device. Nothing is sent anywhere.

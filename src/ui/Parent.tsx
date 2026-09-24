@@ -4,7 +4,7 @@ import { useProgress } from './store';
 import { listener } from '../engine/listener';
 import { freqToMidiFloat, midiName } from '../engine/music';
 import { dayKey, initialProgress } from '../game/progress';
-import { itemClef, itemNote, type ItemId } from '../game/content';
+import { intervalLabel, itemClef, itemInterval, itemNote, type ItemId } from '../game/content';
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
@@ -142,7 +142,15 @@ function ReadingSpeeds() {
           {rows.map((r) => (
             <tr key={r.id}>
               <td>
-                {spell(itemNote(r.id))} <span className="muted">{itemClef(r.id)}</span>
+                {itemInterval(r.id) !== null ? (
+                  <>
+                    {intervalLabel(itemInterval(r.id)!)} <span className="muted">interval</span>
+                  </>
+                ) : (
+                  <>
+                    {spell(itemNote(r.id))} <span className="muted">{itemClef(r.id)}</span>
+                  </>
+                )}
               </td>
               <td className={r.avgMs && r.avgMs > 2500 ? 'slow' : r.avgMs && r.avgMs < 1500 ? 'fast' : ''}>{r.avgMs ? `${(r.avgMs / 1000).toFixed(1)}s` : '–'}</td>
               <td>{Math.round(r.acc * 100)}%</td>
@@ -307,6 +315,10 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
               </option>
             ))}
           </select>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={progress.settings.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} /> Unlock
+          every lesson <span className="muted">(to skip ahead, or to try later units)</span>
         </label>
         <label className="check">
           <input type="checkbox" checked={progress.settings.sound} onChange={(e) => setSettings({ sound: e.target.checked })} /> Sound effects

@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { greeting } from './lines';
-import { UNITS, itemLetter, type LessonDef, type UnitDef } from '../game/content';
+import { UNITS, type LessonDef, type UnitDef } from '../game/content';
+import { describeNew } from '../game/lesson';
 import { currentStreak, goalMs, isUnlocked, nextLessonId, today } from '../game/progress';
 import { listener } from '../engine/listener';
 import { unlockSound } from './sound';
@@ -161,11 +162,13 @@ export function Home({ go }: { go: (s: Screen) => void }) {
             <div className="sheet-unit">{selected.unit.title}</div>
             <h2>{selected.lesson.title}</h2>
             <p className="sheet-notes">
-              {selected.lesson.newNotes.length
-                ? `New notes: ${selected.lesson.newNotes.map(itemLetter).join(', ')}`
+              {describeNew(selected.lesson).length
+                ? `New ${selected.lesson.intervals ? 'jumps' : 'notes'}: ${describeNew(selected.lesson).join(', ')}`
                 : selected.lesson.checkpoint
                   ? 'Show what you know. Every note so far!'
-                  : 'Practise the notes you know'}
+                  : selected.lesson.intervals
+                    ? 'Practise reading the jumps between notes'
+                    : 'Practise the notes you know'}
             </p>
             <button className="btn btn-primary btn-big" disabled={starting} onClick={() => start(selected.lesson.id)}>
               {starting ? 'Getting ready…' : progress.lessons[selected.lesson.id]?.completed ? 'Practise again' : 'Start'}

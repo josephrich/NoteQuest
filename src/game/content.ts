@@ -12,6 +12,16 @@ export interface LessonDef {
   // Notes introduced here (they get a "meet the note" card first).
   newNotes: ItemId[];
   checkpoint?: boolean;
+  // Interval lessons: read the distance between notes rather than naming each one.
+  intervals?: IntervalSpec;
+}
+
+export interface IntervalSpec {
+  // Interval sizes in play, counted the musical way: 2 = a 2nd (step), 3 = a 3rd (skip)...
+  sizes: number[];
+  // Sizes introduced here (they get a "meet" card first).
+  newSizes: number[];
+  clefs: Clef[];
 }
 
 export interface UnitDef {
@@ -21,6 +31,46 @@ export interface UnitDef {
   color: string;
   lessons: LessonDef[];
   comingSoon?: boolean;
+}
+
+// Interval stats are kept alongside note stats, as "interval:3" and so on.
+export const intervalItem = (size: number): ItemId => `interval:${size}`;
+
+export function isNoteItem(id: ItemId): boolean {
+  return id.startsWith('treble:') || id.startsWith('bass:');
+}
+
+export function itemInterval(id: ItemId): number | null {
+  return id.startsWith('interval:') ? Number(id.split(':')[1]) : null;
+}
+
+const INTERVAL_LABELS: Record<number, string> = { 1: 'Same note', 2: '2nd · step', 3: '3rd · skip', 4: '4th', 5: '5th', 6: '6th', 7: '7th', 8: 'Octave' };
+const INTERVAL_WORDS: Record<number, string> = { 1: 'the same note', 2: 'a step', 3: 'a skip', 4: 'a 4th', 5: 'a 5th', 6: 'a 6th', 7: 'a 7th', 8: 'an octave' };
+
+export const intervalLabel = (size: number): string => INTERVAL_LABELS[size] ?? `${size}th`;
+export const intervalWord = (size: number): string => INTERVAL_WORDS[size] ?? `${size} notes apart`;
+
+// Moves a note up (or down, for negative steps) by letter names, staying in its clef.
+export function shiftItem(id: ItemId, steps: number): ItemId {
+  const n = itemNote(id);
+  const pos = n.octave * 7 + n.letter + steps;
+  return `${itemClef(id)}:${LETTERS[((pos % 7) + 7) % 7]}${Math.floor(pos / 7)}`;
+}
+
+// How each interval looks, and an example pair to show when it is introduced.
+export const INTERVAL_TIPS: Record<number, string> = {
+  1: 'When a note repeats, it stays in exactly the same place. Play the same key again.',
+  2: 'A step goes from a line to the very next space, or a space to the very next line. On the piano it is the next white key.',
+  3: 'A skip goes from a line to the next line, or a space to the next space. It jumps over one white key.',
+  4: 'A 4th goes from a line to a space (or a space to a line), with two notes in between. It is bigger than a skip.',
+  5: 'A 5th goes from a line to a line two lines away (or space to space). In a five-finger position it is thumb to little finger.',
+  8: 'An octave lands on the same letter, eight notes away. One note is on a line and the other is in a space. Stretch your hand!',
+};
+
+export function intervalExample(size: number, clef: Clef): [ItemId, ItemId] {
+  const start = clef === 'treble' ? (size === 8 || size === 5 ? 'C4' : size === 4 ? 'G4' : 'E4') : size === 8 ? 'C3' : size === 5 ? 'F2' : 'G2';
+  const a = `${clef}:${start}`;
+  return [a, shiftItem(a, size - 1)];
 }
 
 export function itemClef(id: ItemId): Clef {
@@ -52,6 +102,16 @@ function progressive(id: string, titles: string[], adds: ItemId[][], checkpointT
   });
   lessons.push({ id: `${id}-check`, title: checkpointTitle, pool, newNotes: [], checkpoint: true });
   return lessons;
+}
+
+// Notes on the staff (no ledger lines) that interval lessons draw from.
+export const STAFF_NOTES: Record<Clef, ItemId[]> = {
+  treble: t('C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'),
+  bass: b('F2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4'),
+};
+
+function intervalLesson(id: string, title: string, sizes: number[], newSizes: number[], clefs: Clef[]): LessonDef {
+  return { id, title, pool: clefs.flatMap((c) => STAFF_NOTES[c]), newNotes: [], intervals: { sizes, newSizes, clefs } };
 }
 
 export const UNITS: UnitDef[] = [
@@ -110,7 +170,21 @@ export const UNITS: UnitDef[] = [
       'Ledger line challenge',
     ),
   },
-  { id: 'intervals', title: 'Steps, Skips & Leaps', subtitle: 'Read the shape between notes', color: '#8a8aa3', lessons: [], comingSoon: true },
+  {
+    id: 'intervals',
+    title: 'Steps, Skips & Leaps',
+    subtitle: 'Read the jump from one note to the next',
+    color: '#3d8bff',
+    lessons: [
+      intervalLesson('intervals-1', 'Steps', [1, 2], [1, 2], ['treble']),
+      intervalLesson('intervals-2', 'Skips', [2, 3], [3], ['treble']),
+      intervalLesson('intervals-3', 'Steps & skips in bass', [2, 3], [], ['bass']),
+      intervalLesson('intervals-4', 'Leaps: 4ths & 5ths', [2, 3, 4, 5], [4, 5], ['treble']),
+      intervalLesson('intervals-5', 'Leaps in bass', [3, 4, 5], [], ['bass']),
+      intervalLesson('intervals-6', 'Octave jumps', [3, 5, 8], [8], ['treble', 'bass']),
+      { ...intervalLesson('intervals-check', 'Shape challenge', [2, 3, 4, 5, 8], [], ['treble', 'bass']), checkpoint: true },
+    ],
+  },
   { id: 'triads', title: 'Chords', subtitle: 'Play three notes at once', color: '#8a8aa3', lessons: [], comingSoon: true },
 ];
 

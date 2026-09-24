@@ -1,7 +1,7 @@
 // Daily Review: an endless, fresh practice lesson built from every note he has learned so far,
 // leaning on the notes he reads slowest or misses most. This is what keeps the app useful after
 // the course runs out.
-import { REVIEW_ID, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
+import { REVIEW_ID, isNoteItem, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
 import { buildLesson, nameOptions, needWeight, type Challenge, type ItemStat } from './lesson';
 import { dayKey, type Progress } from './progress';
 
@@ -17,8 +17,9 @@ export const MIN_LEARNED = 2;
 
 type Rnd = () => number;
 
+// Notes he has practised (interval stats are kept alongside, but the review is about notes).
 export function learnedItems(stats: Record<ItemId, ItemStat>): ItemId[] {
-  return Object.keys(stats).filter((id) => stats[id].seen > 0);
+  return Object.keys(stats).filter((id) => isNoteItem(id) && stats[id].seen > 0);
 }
 
 export function reviewUnlocked(p: Progress): boolean {
