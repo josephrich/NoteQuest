@@ -349,6 +349,9 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <p>
           <a href="./mic-test.html">Open the microphone test page</a> to check note and chord detection.
         </p>
+        <p>
+          <a href="./privacy.html">Privacy policy</a>: Clefwing collects no personal information, and the microphone is only used to hear notes, never recorded.
+        </p>
         <p className="muted">Progress is saved in Safari on this iPad only. Clearing Safari website data will erase it.</p>
         <button
           className="btn btn-danger"

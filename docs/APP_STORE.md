@@ -38,8 +38,8 @@ For TestFlight: **Product › Archive › Distribute App › App Store Connect**
 - **Category**: Education, plus the **Kids** category (ages 6–8) if you want it listed there.
   Kids-category apps must have no third-party analytics or ads, and must keep links out of the app
   behind a parental gate.
-- **Privacy**: "Data Not Collected" nutrition label. A privacy policy URL is still required; one
-  short page saying nothing is collected is enough. It could live on GitHub Pages.
+- **Privacy**: "Data Not Collected" nutrition label. Privacy policy URL:
+  https://josephrich.github.io/NoteQuest/privacy.html
 - **Name**: "Clefwing: Piano Note Reading" ("NoteQuest" was already taken). Worth a free search on
   IP Australia's trademark database before investing heavily in the name.
 - **Listing text**: avoid presenting the app as official AMEB material. Saying it "helps with
