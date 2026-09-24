@@ -1,17 +1,17 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { detectPitch } from '../src/pitch.js';
-import { verifyChord } from '../src/chord.js';
-import { magnitudeSpectrum } from '../src/fft.js';
-import { freqToMidiFloat, midiName } from '../src/music.js';
-import { OnsetDetector, NoteTracker, ChordTracker } from '../src/trackers.js';
-import { pianoNotes, addPiano } from './synth.js';
+import { detectPitch } from './pitch';
+import { verifyChord } from './chord';
+import { magnitudeSpectrum } from './fft';
+import { freqToMidiFloat, midiName } from './music';
+import { OnsetDetector, NoteTracker, ChordTracker } from './trackers';
+import { pianoNotes, addPiano } from './test-synth';
 
 const SR = 48000;
 const PITCH_WINDOW = 2048;
 const FFT = 8192;
 
-const slice = (buf, startSec, len) => buf.subarray(Math.round(startSec * SR), Math.round(startSec * SR) + len);
+const slice = (buf: Float32Array, startSec: number, len: number) => buf.subarray(Math.round(startSec * SR), Math.round(startSec * SR) + len);
 
 test('single notes are detected in the right octave across the grade 1-3 range', () => {
   for (let midi = 41; midi <= 84; midi++) {
@@ -29,14 +29,14 @@ test('a flat piano is matched once calibrated', () => {
   const refA4 = 432; // ~32 cents flat
   const sig = pianoNotes([64], { refA4 });
   const res = detectPitch(slice(sig, 0.08, PITCH_WINDOW), SR);
-  assert.equal(Math.round(freqToMidiFloat(res.freq, refA4)), 64);
+  assert.equal(Math.round(freqToMidiFloat(res!.freq, refA4)), 64);
 });
 
 test('silence gives no pitch', () => {
   assert.equal(detectPitch(new Float32Array(PITCH_WINDOW), SR), null);
 });
 
-const spectrumOf = (midis, opts) => magnitudeSpectrum(slice(pianoNotes(midis, opts), 0.1, FFT));
+const spectrumOf = (midis: number[], opts: Parameters<typeof pianoNotes>[1] = {}) => magnitudeSpectrum(slice(pianoNotes(midis, opts), 0.1, FFT));
 
 test('correct triads pass verification', () => {
   const chords = [
@@ -74,7 +74,7 @@ test('a missing chord note fails verification', () => {
 });
 
 // Simulate the browser frame loop: ~60fps, RMS on the newest 1024 samples.
-function* frames(sig, { stepMs = 16 } = {}) {
+function* frames(sig: Float32Array, { stepMs = 16 } = {}) {
   const step = Math.round((stepMs / 1000) * SR);
   for (let end = FFT; end <= sig.length; end += step) {
     const newest = sig.subarray(end - 1024, end);
@@ -117,7 +117,7 @@ test('a double attack on one key press is reported once', () => {
 });
 
 test('chord tracker accepts the right chord and rejects a wrong one', () => {
-  const run = (played, expected) => {
+  const run = (played: number[], expected: number[]) => {
     const sig = new Float32Array(Math.round(1.2 * SR));
     addPiano(sig, played, { start: 0.3 });
     const onsets = new OnsetDetector();

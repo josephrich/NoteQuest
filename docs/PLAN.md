@@ -49,8 +49,8 @@ concepts (anchor notes) but ran out of content within a week.
 
 | Phase | Build | Outcome |
 |---|---|---|
-| 0 | Mic detection test page + tuning calibration | Proof it works on our piano (**this repo, now**) |
-| 1 | Note Sprint lessons + XP + streak + mascot | Daily habit |
+| 0 | Mic detection test page + tuning calibration | Proof it works on our piano. **Done:** 0 misjudged notes or chords in the iPad field test |
+| 1 | Note Sprint lessons + XP + streak + mascot | Daily habit. **Built:** 4 units, dragon mascot, streaks, gems, parent area |
 | 2 | Path map, units, gems, shop, parent-set prizes | The Duolingo pull |
 | 3 | Scrolling reader with a visual beat, intervals, triads | Real sight-reading and chords |
 | 4 | Character leagues, eyes-up bonus, parent dashboard | Competition and tracking weak spots |
@@ -60,4 +60,4 @@ concepts (anchor notes) but ran out of content within a week.
 - A metronome click from the iPad speaker would leak into the mic, so use a **visual beat** (or earphones).
 - Calibrate to the piano's real tuning; match notes within ±45 cents.
 - Early levels can accept the right note name in any octave; later levels require the exact octave.
-- Stack for later phases: Next.js + TypeScript PWA, VexFlow, Supabase for progress, IndexedDB offline.
+- Stack: Vite + React + TypeScript, VexFlow, deployed to GitHub Pages. Progress in localStorage for now; Supabase when leagues need a backend.

@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { randomNote, randomTriad, spell, toMidi, note } from '../src/music.js';
-import { seededRandom } from './synth.js';
+import { randomNote, randomTriad, spell, toMidi, note } from './music';
+import { seededRandom } from './test-synth';
 
 test('middle C is MIDI 60', () => {
   assert.equal(toMidi(note(0, 4)), 60);

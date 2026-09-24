@@ -1,5 +1,5 @@
 // In-place iterative radix-2 FFT. `re` and `im` must have the same power-of-two length.
-export function fft(re, im, inverse = false) {
+export function fft(re: Float64Array, im: Float64Array, inverse = false): void {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;
@@ -41,7 +41,7 @@ export function fft(re, im, inverse = false) {
   }
 }
 
-export function nextPow2(n) {
+export function nextPow2(n: number): number {
   let p = 1;
   while (p < n) p <<= 1;
   return p;
@@ -49,15 +49,12 @@ export function nextPow2(n) {
 
 // Linear magnitude spectrum with a Blackman window, matching what the Web Audio
 // AnalyserNode computes (before its dB conversion). Returns fftSize/2 bins.
-export function magnitudeSpectrum(samples) {
+export function magnitudeSpectrum(samples: Float32Array): Float32Array {
   const n = samples.length;
   const re = new Float64Array(n);
   const im = new Float64Array(n);
-  const a0 = 0.42;
-  const a1 = 0.5;
-  const a2 = 0.08;
   for (let i = 0; i < n; i++) {
-    const w = a0 - a1 * Math.cos((2 * Math.PI * i) / n) + a2 * Math.cos((4 * Math.PI * i) / n);
+    const w = 0.42 - 0.5 * Math.cos((2 * Math.PI * i) / n) + 0.08 * Math.cos((4 * Math.PI * i) / n);
     re[i] = samples[i] * w;
   }
   fft(re, im);

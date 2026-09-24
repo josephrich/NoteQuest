@@ -1,10 +1,15 @@
 // Monophonic pitch detection using the McLeod Pitch Method (NSDF + key maxima).
 // Autocorrelation is computed via FFT so it stays cheap enough to run every frame on an iPad.
-import { fft, nextPow2 } from './fft.js';
+import { fft, nextPow2 } from './fft';
 
-const scratch = new Map();
+export interface Pitch {
+  freq: number;
+  clarity: number;
+}
 
-function buffers(size) {
+const scratch = new Map<number, { re: Float64Array; im: Float64Array }>();
+
+function buffers(size: number) {
   let b = scratch.get(size);
   if (!b) {
     b = { re: new Float64Array(size), im: new Float64Array(size) };
@@ -13,7 +18,11 @@ function buffers(size) {
   return b;
 }
 
-export function detectPitch(buf, sampleRate, { minFreq = 55, maxFreq = 2100, cutoff = 0.9, minRms = 0.002 } = {}) {
+export function detectPitch(
+  buf: Float32Array,
+  sampleRate: number,
+  { minFreq = 55, maxFreq = 2100, cutoff = 0.9, minRms = 0.002 } = {},
+): Pitch | null {
   const n = buf.length;
   let sumSq = 0;
   for (let i = 0; i < n; i++) sumSq += buf[i] * buf[i];
@@ -42,7 +51,7 @@ export function detectPitch(buf, sampleRate, { minFreq = 55, maxFreq = 2100, cut
   }
 
   // Key maxima: the highest point in each positive lobe after the first negative crossing.
-  const peaks = [];
+  const peaks: number[] = [];
   let tau = 1;
   while (tau < maxLag && nsdf[tau] > 0) tau++;
   while (tau < maxLag) {
@@ -62,7 +71,7 @@ export function detectPitch(buf, sampleRate, { minFreq = 55, maxFreq = 2100, cut
 
   let highest = 0;
   for (const p of peaks) highest = Math.max(highest, nsdf[p]);
-  const chosen = peaks.find((p) => nsdf[p] >= cutoff * highest);
+  const chosen = peaks.find((p) => nsdf[p] >= cutoff * highest)!;
 
   const a = nsdf[chosen - 1];
   const b = nsdf[chosen];

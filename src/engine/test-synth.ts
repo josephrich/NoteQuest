@@ -1,7 +1,7 @@
 // Crude synthetic piano: inharmonic partials with per-partial decay, weak fundamentals in the bass,
 // a short attack and a little background noise. Good enough to exercise the detectors.
 
-export function seededRandom(seed = 1) {
+export function seededRandom(seed = 1): () => number {
   let s = seed >>> 0;
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -9,7 +9,7 @@ export function seededRandom(seed = 1) {
   };
 }
 
-export function pianoNotes(midis, { sampleRate = 48000, duration = 0.6, refA4 = 440, B = 0.0004, noise = 0.002, start = 0, seed = 7 } = {}) {
+export function pianoNotes(midis: number[], { sampleRate = 48000, duration = 0.6, refA4 = 440, B = 0.0004, noise = 0.002, start = 0, seed = 7 } = {}) {
   const n = Math.round((start + duration) * sampleRate);
   const out = new Float32Array(n);
   addPiano(out, midis, { sampleRate, refA4, B, start });
@@ -19,7 +19,7 @@ export function pianoNotes(midis, { sampleRate = 48000, duration = 0.6, refA4 = 
 }
 
 // `end` is the key release: the damper then kills the note over ~80ms.
-export function addPiano(out, midis, { sampleRate = 48000, refA4 = 440, B = 0.0004, start = 0, end = Infinity, gain = 0.2 } = {}) {
+export function addPiano(out: Float32Array, midis: number[], { sampleRate = 48000, refA4 = 440, B = 0.0004, start = 0, end = Infinity, gain = 0.2 } = {}) {
   const s0 = Math.round(start * sampleRate);
   const release = 0.08;
   for (const midi of midis) {

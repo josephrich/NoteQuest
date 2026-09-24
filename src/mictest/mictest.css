@@ -63,7 +63,7 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; backgrou
 
 .stage { text-align: center; margin: 10px 0; padding: 10px; background: var(--bg); border-radius: 14px; }
 .staff { display: flex; justify-content: center; min-height: 190px; }
-.staff svg { max-width: 100%; height: auto; }
+.staff svg { width: 100%; max-width: 480px; height: auto; }
 .target-label { margin: 0; min-height: 1.4em; color: var(--muted); }
 .feedback { font-size: 1.3rem; font-weight: 600; margin: 6px 0; min-height: 1.6em; }
 .feedback.good { color: var(--good); }

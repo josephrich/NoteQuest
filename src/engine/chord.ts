@@ -1,16 +1,31 @@
 // Polyphonic *verification*: we know which notes the player was asked for, so rather than
 // transcribing the audio we check that (a) each expected note is present and (b) nearly all
 // spectral energy is explained by the harmonics of the expected notes.
-import { freqToMidiFloat, midiToFreq } from './music.js';
+import { freqToMidiFloat, midiToFreq } from './music';
 
-export function findPeaks(mags, sampleRate, fftSize, { fMin = 50, fMax = 4200, floor = 0.02 } = {}) {
+type Spectrum = ArrayLike<number>;
+
+export interface Peak {
+  freq: number;
+  mag: number;
+}
+
+export interface ChordCheck {
+  pass: boolean;
+  explained: number;
+  presence: number[];
+  unexplained: { freq: number; ratio: number }[];
+  chroma: Float64Array;
+}
+
+export function findPeaks(mags: Spectrum, sampleRate: number, fftSize: number, { fMin = 50, fMax = 4200, floor = 0.02 } = {}) {
   const binHz = sampleRate / fftSize;
   const k0 = Math.max(2, Math.ceil(fMin / binHz));
   const k1 = Math.min(mags.length - 2, Math.floor(fMax / binHz));
   let max = 0;
   for (let k = k0; k <= k1; k++) max = Math.max(max, mags[k]);
-  if (max <= 0) return { peaks: [], max: 0 };
-  const peaks = [];
+  const peaks: Peak[] = [];
+  if (max <= 0) return { peaks, max: 0 };
   for (let k = k0; k <= k1; k++) {
     const m = mags[k];
     if (m < floor * max || m <= mags[k - 1] || m < mags[k + 1]) continue;
@@ -26,7 +41,7 @@ export function findPeaks(mags, sampleRate, fftSize, { fMin = 50, fMax = 4200, f
 }
 
 // 12-bin pitch-class profile, for display.
-export function chroma(peaks, refA4 = 440) {
+export function chroma(peaks: Peak[], refA4 = 440): Float64Array {
   const out = new Float64Array(12);
   for (const p of peaks) {
     const mf = freqToMidiFloat(p.freq, refA4);
@@ -39,23 +54,26 @@ export function chroma(peaks, refA4 = 440) {
   return out;
 }
 
-function centsBetween(f, target) {
+function centsBetween(f: number, target: number) {
   return 1200 * Math.log2(f / target);
 }
 
-export function verifyChord(mags, sampleRate, fftSize, expectedMidis, {
-  refA4 = 440,
-  maxHarmonic = 8,
-  minExplained = 0.8,
-  minPresence = 0.08,
-} = {}) {
+export function verifyChord(
+  mags: Spectrum,
+  sampleRate: number,
+  fftSize: number,
+  expectedMidis: number[],
+  { refA4 = 440, maxHarmonic = 8, minExplained = 0.8, minPresence = 0.08 } = {},
+): ChordCheck {
   const { peaks, max } = findPeaks(mags, sampleRate, fftSize);
-  if (!peaks.length) return { pass: false, explained: 0, presence: expectedMidis.map(() => 0), unexplained: [], chroma: new Float64Array(12) };
+  if (!peaks.length) {
+    return { pass: false, explained: 0, presence: expectedMidis.map(() => 0), unexplained: [], chroma: new Float64Array(12) };
+  }
   const f0s = expectedMidis.map((m) => midiToFreq(m, refA4));
 
   let explainedPower = 0;
   let totalPower = 0;
-  const unexplained = [];
+  const unexplained: { freq: number; ratio: number }[] = [];
   for (const p of peaks) {
     const power = p.mag * p.mag;
     totalPower += power;

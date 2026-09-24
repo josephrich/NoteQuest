@@ -5,34 +5,68 @@ export const FFT_SIZE = 8192;
 export const PITCH_WINDOW = 2048;
 const RMS_WINDOW = 1024;
 
+export interface Frame {
+  t: number;
+  rms: number;
+  pitchWindow: Float32Array;
+  mags: Float32Array;
+}
+
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
 export class Mic {
+  raw = true;
+  private ctx: AudioContext | null = null;
+  private stream: MediaStream | null = null;
+  private analyser: AnalyserNode | null = null;
+  private time = new Float32Array(FFT_SIZE);
+  private db = new Float32Array(FFT_SIZE / 2);
+  private mags = new Float32Array(FFT_SIZE / 2);
+
   // Must be called from a user gesture (tap) so iOS lets the AudioContext start.
-  async start({ raw = true } = {}) {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    this.ctx = new Ctx();
-    const resumed = this.ctx.resume();
+  async start({ raw = true } = {}): Promise<this> {
+    const Ctx = window.AudioContext || window.webkitAudioContext!;
+    const ctx = new Ctx();
+    this.ctx = ctx;
+    const resumed = ctx.resume();
     const audio = raw ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : true;
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+    } catch (err) {
+      await ctx.close();
+      this.ctx = null;
+      throw err;
+    }
     await resumed;
     this.raw = raw;
-    this.source = this.ctx.createMediaStreamSource(this.stream);
-    this.analyser = this.ctx.createAnalyser();
+    const source = ctx.createMediaStreamSource(this.stream);
+    this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = FFT_SIZE;
     this.analyser.smoothingTimeConstant = 0;
-    this.source.connect(this.analyser);
-    this.time = new Float32Array(FFT_SIZE);
-    this.db = new Float32Array(FFT_SIZE / 2);
-    this.mags = new Float32Array(FFT_SIZE / 2);
+    source.connect(this.analyser);
     return this;
   }
 
-  get sampleRate() {
-    return this.ctx.sampleRate;
+  get running(): boolean {
+    return this.ctx !== null;
+  }
+
+  get sampleRate(): number {
+    return this.ctx?.sampleRate ?? 48000;
+  }
+
+  // iOS suspends the audio context when the app is backgrounded.
+  async resume(): Promise<void> {
+    if (this.ctx && this.ctx.state !== 'running') await this.ctx.resume();
   }
 
   diagnostics() {
     const track = this.stream?.getAudioTracks()[0];
-    const settings = track?.getSettings?.() ?? {};
+    const settings: MediaTrackSettings = track?.getSettings?.() ?? {};
     return {
       requested: this.raw ? 'raw (processing off)' : 'default (voice processing on)',
       echoCancellation: settings.echoCancellation,
@@ -45,9 +79,10 @@ export class Mic {
     };
   }
 
-  read() {
-    this.analyser.getFloatTimeDomainData(this.time);
-    this.analyser.getFloatFrequencyData(this.db);
+  read(): Frame {
+    const analyser = this.analyser!;
+    analyser.getFloatTimeDomainData(this.time);
+    analyser.getFloatFrequencyData(this.db);
     // The AnalyserNode reports dB; the detectors want linear magnitude.
     for (let i = 0; i < this.db.length; i++) this.mags[i] = this.db[i] === -Infinity ? 0 : 10 ** (this.db[i] / 20);
     let s = 0;
@@ -60,10 +95,11 @@ export class Mic {
     };
   }
 
-  async stop() {
+  async stop(): Promise<void> {
     this.stream?.getTracks().forEach((tr) => tr.stop());
     await this.ctx?.close();
     this.ctx = null;
     this.stream = null;
+    this.analyser = null;
   }
 }

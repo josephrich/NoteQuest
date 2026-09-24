@@ -1,9 +1,10 @@
-import { Mic, FFT_SIZE } from './audio.js';
-import { detectPitch } from './pitch.js';
-import { findPeaks, chroma } from './chord.js';
-import { OnsetDetector, NoteTracker, ChordTracker } from './trackers.js';
-import { randomNote, randomTriad, midiName, freqToMidiFloat } from './music.js';
-import { renderTarget } from './staff.js';
+// The original Phase 0 microphone test page, kept for troubleshooting detection on a new piano.
+import { Mic, FFT_SIZE } from '../engine/audio';
+import { detectPitch } from '../engine/pitch';
+import { findPeaks, chroma } from '../engine/chord';
+import { OnsetDetector, NoteTracker, ChordTracker } from '../engine/trackers';
+import { randomNote, randomTriad, midiName, freqToMidiFloat } from '../engine/music';
+import { renderStaff } from '../engine/staff';
 
 const $ = (id) => document.getElementById(id);
 const PC_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -153,7 +154,7 @@ function nextTarget() {
     });
     chordTracker?.setTarget(state.target.midis);
   }
-  renderTarget($('staff'), state.target);
+  renderStaff($('staff'), { clef: state.target.clef, key: state.target.key, groups: [state.target.notes], label: state.target.label });
   $('target-label').textContent = $('reveal').checked ? state.target.label : '';
   state.shownT = performance.now();
   state.tries = 0;

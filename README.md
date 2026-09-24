@@ -1,80 +1,77 @@
 # NoteQuest
 
-A gamified sight-reading trainer for an 8-year-old learning piano (AMEB Grade 3), designed for a
-**normal acoustic piano**: the iPad listens through its microphone, with no MIDI needed.
+A Duolingo-style note-reading game for a young pianist, built for a **normal acoustic piano**: the
+iPad sits on the music stand and listens through its microphone. No MIDI needed.
 
-This repo is currently at **Phase 0: the microphone test page**. It answers one question before we
-build the game: *can an iPad on the music stand reliably hear single notes and chords on our piano?*
+**Play it:** https://josephrich.github.io/NoteQuest/. In Safari on the iPad, use *Share › Add to
+Home Screen* for a full-screen app with the dragon icon.
 
-See [`docs/PLAN.md`](docs/PLAN.md) for the full product plan.
+See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap.
 
-## Running it
+## What's in it (Phase 1)
 
-It's plain HTML and ES modules, with no build step.
+- **Onboarding**: the player's name and a name for their dragon (both kept on the device only),
+  plus a quick "play any note" mic check.
+- **Path of lessons** in four units: Treble Landmarks, Bass Landmarks, Both Hands and Ledger Lines.
+  New notes are taught relative to landmark notes (middle C, the G line, the F line, treble and bass C).
+- **Challenge types**:
+  - *Meet the note*: a tip explaining where the note sits
+  - *What note is this?*: tap the letter
+  - *Play this note*: heard through the mic
+  - *Play these notes in order*: three-note bursts
+- **Adaptive practice**: every note's reading time and accuracy is tracked, and slow or missed
+  notes come up more often.
+- **Rewards**:
+  - XP, with ⚡ lightning bonuses for fast reads and 🔥 combo bonuses
+  - A gem chest after each lesson
+  - A daily goal (10 minutes by default) that builds a 🔥 streak, protected by streak freezes 🧊
+    (one earned per week of streak)
+- **Mistakes are gentle**: no lives. A wrong name is shown and asked again later. A wrong note says
+  what was heard, with a hint after two misses and the answer after three.
+- **Grown-ups area** (behind a times-table question):
+  - 14-day practice chart
+  - Per-note reading speed
+  - Piano tuning
+  - Settings and reset
+- The original **mic test page** is at `/mic-test.html` for troubleshooting.
+
+Progress lives in Safari's local storage on the device. Nothing is sent anywhere.
+
+## Development
 
 ```bash
-npm start        # serves on http://localhost:5173
-npm test         # detection tests against synthetic piano audio
+npm install
+npm run dev        # http://localhost:5173 (add ?debug to enable window.__nq.note(midi) for testing)
+npm test           # unit tests: detection, lessons, scoring, streaks
+npm run build      # type-check and build to dist/
 ```
 
-### Getting it onto the iPad
+Pushing to `main` runs the tests, builds, and publishes `dist/` to the `gh-pages` branch
+(`.github/workflows/deploy.yml`).
 
-Safari only allows the microphone on **https://** pages (or `localhost`), so the easiest route is
-to deploy it:
-
-- **Vercel**: *Add New… › Project*, import this repo, framework preset **Other**, no build command.
-  Every push then gets its own https URL.
-- **Netlify** or **Cloudflare Pages**: same idea, publish directory `.`.
-
-Then open the URL in Safari on the iPad. Optionally use *Share › Add to Home Screen*.
-
-## How to run the test (about 20 minutes)
-
-1. Put the iPad on the music stand, where it would sit during practice.
-2. **Start listening** and allow the microphone. Open *Diagnostics* and check that
-   `echoCancellation`, `noiseSuppression` and `autoGainControl` all say `false`.
-3. **Calibrate**: play the A above middle C three times.
-4. **Single notes**: play about 40 notes. Mix in some deliberately wrong notes and some in the wrong
-   octave. Whenever the app judges wrongly, tap **"The app judged that wrong"**.
-5. **Chords**: play about 30 triads (try a few wrong ones too). Repeat with *Inversions* and
-   *Bass clef too* switched on.
-6. Untick **Raw audio** and repeat a shorter round of each. This compares Safari's default voice
-   processing against raw audio.
-7. Tap **Copy results** and paste them back to Claude.
-
-### What counts as a pass
-
-| Test | Go ahead with the web app if… |
-|---|---|
-| Single notes (raw) | App accuracy ≥ 95%, median detect time under 150 ms |
-| Chords (raw) | App accuracy ≥ 90% |
-
-If it falls short, the fallback is a native iOS app (AVAudioEngine in measurement mode, which
-gives completely unprocessed audio) running the same detection logic.
+Safari only allows the microphone on https pages (or localhost). To try the dev server on an iPad,
+use the deployed site or an https tunnel.
 
 ## How detection works
 
-- **Single notes**: the McLeod Pitch Method (`src/pitch.js`) on a 2048-sample window. A note
-  is confirmed after a detected attack plus three consistent high-clarity readings
-  (`src/trackers.js`).
-- **Chords**: we *verify* rather than transcribe (`src/chord.js`). The app knows which chord it
-  asked for, so it checks that each expected note's fundamental is present and that at least 80%
-  of the spectral energy is explained by the harmonics of those notes. A wrong note shows up as
-  energy that nothing explains.
-- **Tuning**: calibration stores the piano's actual A, and notes are matched relative to that.
-- **Sound**: the page makes no sound of its own, so nothing leaks back into the mic.
+- **Single notes**: the McLeod Pitch Method (`src/engine/pitch.ts`) on a 2048-sample window. A note is
+  confirmed after a detected attack plus three consistent high-clarity readings
+  (`src/engine/trackers.ts`). A repeat of the same note within 250 ms counts as the same key press.
+- **Chords**: verified rather than transcribed (`src/engine/chord.ts`). Every expected note's
+  fundamental must be present, and at least 80% of the spectral energy must be explained by the
+  harmonics of those notes.
+- **Tuning**: notes are matched relative to the piano's measured A.
+- **Reward sounds** are pitched above the detector's range and only play while the app isn't listening.
+
+Field test on an iPad and an acoustic piano: 0 misjudged notes out of 41 and 0 misjudged chords out
+of 34. Median detection time was 67 ms for notes and 117 ms for chords.
 
 ## Layout
 
 ```
-index.html, styles.css   test page
-src/app.js               UI wiring, judging, results
-src/audio.js             mic capture (AnalyserNode)
-src/pitch.js             single-note pitch detection
-src/chord.js             chord verification + chroma display
-src/trackers.js          attack detection, note/chord event logic
-src/music.js             note spelling, keys, random targets
-src/staff.js             VexFlow rendering
-test/                    node:test suites + synthetic piano generator
-vendor/vexflow.js        VexFlow 4.2.5 (MIT)
+src/engine/   audio capture, pitch & chord detection, note events, music theory, staff drawing
+src/game/     course content, lesson building, lesson rules (XP/combos), progress & streaks
+src/ui/       React screens: Welcome, Home, Lesson, Results, Parent; the Dragon
+src/mictest/  the Phase 0 microphone test page
+public/       icons and web app manifest
 ```
