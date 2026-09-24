@@ -3,6 +3,7 @@
 import { itemLetter, itemMidi, type ItemId } from './content';
 import { nameOptions, type Challenge } from './lesson';
 import type { LessonOutcome } from './progress';
+import { rollChest } from './rewards';
 
 export const XP = { name: 1, play: 2, burstNote: 1, lightning: 1, comboBonus: 2, complete: 5, perfect: 5 } as const;
 // A reading faster than this earns a lightning bonus.
@@ -137,15 +138,15 @@ export class LessonRun {
     return true;
   }
 
-  // Totals for the results screen and for saving progress.
-  outcome(): LessonOutcome & { perfect: boolean; bestCombo: number } {
+  // Totals for the results screen and for saving progress, including the chest's prize.
+  // `commonStreak` is how many plain chests he has had in a row.
+  outcome(commonStreak: number): LessonOutcome & { perfect: boolean; bestCombo: number } {
     const perfect = this.scored > 0 && this.scoredCorrect === this.scored;
     const bonus = XP.complete + (perfect ? XP.perfect : 0);
-    const gems = 5 + (perfect ? 5 : 0) + Math.floor(this.rnd() * 6);
     return {
       lessonId: this.lessonId,
       xp: this.xp + bonus,
-      gems,
+      chest: rollChest({ perfect, commonStreak }, this.rnd),
       ms: this.activeMs,
       accuracy: this.accuracy,
       answers: this.answers,

@@ -1,6 +1,7 @@
 // Everything NoteQuest remembers, stored only on this device. Pure functions so they can be tested.
 import { LESSON_ORDER, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
+import type { ChestRoll } from './rewards';
 
 export interface DayLog {
   xp: number;
@@ -13,6 +14,8 @@ export interface Progress {
   profile: { name: string; dragonName: string } | null;
   xp: number;
   gems: number;
+  // Common chests in a row, for the chest pity rule.
+  commonChests: number;
   days: Record<string, DayLog>;
   streak: { count: number; lastDay: string | null; freezes: number; best: number };
   lessons: Record<string, { completed: number; bestAccuracy: number }>;
@@ -26,6 +29,7 @@ export function initialProgress(refA4 = 440): Progress {
     profile: null,
     xp: 0,
     gems: 0,
+    commonChests: 0,
     days: {},
     streak: { count: 0, lastDay: null, freezes: 1, best: 0 },
     lessons: {},
@@ -69,7 +73,7 @@ export function currentStreak(p: Progress, now: Date): number {
 export interface LessonOutcome {
   lessonId: string;
   xp: number;
-  gems: number;
+  chest: ChestRoll;
   ms: number;
   accuracy: number;
   answers: { id: ItemId; correct: boolean; ms: number | null }[];
@@ -114,12 +118,14 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
     streak = { count, lastDay: key, freezes, best: Math.max(streak.best, count) };
     streakExtended = true;
   }
+  if (outcome.chest.freeze && streak.freezes < 2) streak = { ...streak, freezes: streak.freezes + 1 };
 
   return {
     progress: {
       ...p,
       xp: p.xp + outcome.xp,
-      gems: p.gems + outcome.gems,
+      gems: p.gems + outcome.chest.gems,
+      commonChests: outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
       days: { ...p.days, [key]: day },
       streak,
       lessons: {

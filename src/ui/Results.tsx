@@ -2,16 +2,17 @@
 import { useMemo, useState } from 'react';
 import { Dragon } from './Dragon';
 import { useProgress } from './store';
-import { sfx } from './sound';
+import { Chest } from './Chest';
 import { GoalRing } from './Home';
 import { goalMs, today } from '../game/progress';
+import type { ChestRoll } from '../game/rewards';
 import type { Screen } from './App';
 
 export interface ResultsData {
   lessonTitle: string;
   unitColor: string;
   xp: number;
-  gems: number;
+  chest: ChestRoll;
   accuracy: number;
   fastestMs: number | null;
   bestCombo: number;
@@ -46,13 +47,15 @@ function Confetti() {
 
 export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => void }) {
   const { progress } = useProgress();
-  const [chestOpen, setChestOpen] = useState(false);
+  // A second burst of confetti for epic and legendary chests.
+  const [bigWin, setBigWin] = useState(false);
   const day = today(progress, new Date());
   const goal = goalMs(progress);
 
   return (
     <div className="results" style={{ ['--unit' as string]: data.unitColor }}>
       <Confetti />
+      {bigWin && <Confetti key="big" />}
       <Dragon mood="cheer" size={150} />
       <h1>{data.perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
       <p className="results-sub">{data.lessonTitle}</p>
@@ -76,17 +79,7 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
         </div>
       </div>
 
-      <button
-        className={`chest ${chestOpen ? 'chest-open' : ''}`}
-        onClick={() => {
-          if (!chestOpen) sfx.chest();
-          setChestOpen(true);
-        }}
-        aria-label={chestOpen ? `${data.gems} gems` : 'Open treasure chest'}
-      >
-        <span className="chest-icon">{chestOpen ? '💎' : '🎁'}</span>
-        <span>{chestOpen ? `+${data.gems} gems!` : 'Tap to open your chest'}</span>
-      </button>
+      <Chest roll={data.chest} totalAfter={progress.gems} onOpened={() => setBigWin(data.chest.rarity === 'epic' || data.chest.rarity === 'legendary')} />
 
       {data.streakExtended ? (
         <div className="streak-card">

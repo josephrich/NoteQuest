@@ -53,7 +53,17 @@ export const sfx = {
   complete() {
     [E7, G7, B7, C8].forEach((f, i) => blip(f, i * 0.11, 0.16, 0.05));
   },
-  chest() {
-    [G7, C8, G7, C8].forEach((f, i) => blip(f, i * 0.07, 0.08, 0.04));
+  // Rattle while the chest shakes; rises in pitch as the reels slow down.
+  tick(i: number) {
+    blip(2700 + i * 60, 0, 0.04, 0.035, 'square');
+  },
+  // Gem counter ticking up.
+  count() {
+    blip(C8, 0, 0.03, 0.025);
+  },
+  // Fanfare that gets longer for rarer chests.
+  reveal(rarity: 'common' | 'rare' | 'epic' | 'legendary') {
+    const notes = { common: [G7, C8], rare: [E7, G7, C8], epic: [E7, G7, B7, C8, B7, C8], legendary: [E7, G7, B7, C8, G7, B7, C8, C8] }[rarity];
+    notes.forEach((f, i) => blip(f, i * 0.09, i === notes.length - 1 ? 0.35 : 0.12, 0.05));
   },
 };

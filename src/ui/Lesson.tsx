@@ -33,7 +33,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const listening = mic && run.phase === 'asking' && c && c.kind !== 'name';
 
   const finish = () => {
-    const outcome = run.outcome();
+    const outcome = run.outcome(progress.commonChests);
     const result = finishLesson(progress, outcome, new Date());
     update(() => result.progress);
     sfx.complete();
@@ -41,7 +41,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
       lessonTitle: lesson.title,
       unitColor: unit.color,
       xp: outcome.xp,
-      gems: outcome.gems,
+      chest: outcome.chest,
       accuracy: outcome.accuracy,
       fastestMs: run.fastestMs,
       bestCombo: outcome.bestCombo,

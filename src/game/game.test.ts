@@ -4,6 +4,7 @@ import { buildLesson, needWeight, updateStat, type Challenge } from './lesson';
 import { LessonRun, XP } from './run';
 import { currentStreak, dayKey, finishLesson, initialProgress, isUnlocked, nextLessonId, type LessonOutcome } from './progress';
 import { seededRandom } from '../engine/test-synth';
+import { rollChest, PITY_AFTER, type Rarity } from './rewards';
 
 const at = (s: string) => new Date(`${s}T17:00:00`);
 
@@ -103,7 +104,7 @@ describe('a lesson in progress', () => {
     }
     expect(run.combo).toBe(5);
     expect(run.xp).toBe(5 * (XP.play + XP.lightning) + XP.comboBonus);
-    const out = run.outcome();
+    const out = run.outcome(0);
     expect(out.perfect).toBe(true);
     expect(out.xp).toBe(run.xp + XP.complete + XP.perfect);
   });
@@ -163,7 +164,7 @@ describe('a lesson in progress', () => {
 });
 
 describe('progress and streaks', () => {
-  const outcome = (ms: number): LessonOutcome => ({ lessonId: 'treble-1', xp: 20, gems: 8, ms, accuracy: 0.9, answers: [{ id: 'treble:C4', correct: true, ms: 900 }] });
+  const outcome = (ms: number): LessonOutcome => ({ lessonId: 'treble-1', xp: 20, chest: { rarity: 'common', gems: 8, freeze: false }, ms, accuracy: 0.9, answers: [{ id: 'treble:C4', correct: true, ms: 900 }] });
 
   test('reaching 10 minutes in a day extends the streak once', () => {
     let p = initialProgress();
@@ -223,5 +224,65 @@ describe('progress and streaks', () => {
 
   test('day keys use the local calendar', () => {
     expect(dayKey(new Date(2026, 0, 5, 23, 30))).toBe('2026-01-05');
+  });
+});
+
+describe('treasure chests', () => {
+  const tally = (perfect: boolean, n = 10_000) => {
+    const rnd = seededRandom(42);
+    const counts: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    let gems = 0;
+    let common = 0;
+    let longestCommonRun = 0;
+    for (let i = 0; i < n; i++) {
+      const c = rollChest({ perfect, commonStreak: common }, rnd);
+      counts[c.rarity]++;
+      gems += c.gems;
+      common = c.rarity === 'common' ? common + 1 : 0;
+      longestCommonRun = Math.max(longestCommonRun, common);
+    }
+    return { counts, avg: gems / n, longestCommonRun };
+  };
+
+  test('prizes vary, mostly common with occasional big wins', () => {
+    const { counts, avg } = tally(false);
+    expect(counts.common / 10_000).toBeGreaterThan(0.5);
+    expect(counts.rare).toBeGreaterThan(counts.epic);
+    expect(counts.epic).toBeGreaterThan(counts.legendary);
+    expect(counts.legendary).toBeGreaterThan(0);
+    expect(avg).toBeGreaterThan(12);
+    expect(avg).toBeLessThan(25);
+  });
+
+  test('a perfect lesson improves the odds', () => {
+    expect(tally(true).avg).toBeGreaterThan(tally(false).avg + 3);
+  });
+
+  test('never more than four common chests in a row', () => {
+    expect(tally(false).longestCommonRun).toBe(PITY_AFTER);
+  });
+
+  test('gem amounts stay inside each tier', () => {
+    const rnd = seededRandom(7);
+    for (let i = 0; i < 2000; i++) {
+      const c = rollChest({ perfect: false, commonStreak: 0 }, rnd);
+      const [lo, hi] = { common: [5, 12], rare: [15, 25], epic: [30, 50], legendary: [100, 100] }[c.rarity];
+      expect(c.gems).toBeGreaterThanOrEqual(lo);
+      expect(c.gems).toBeLessThanOrEqual(hi);
+      expect(c.freeze).toBe(c.rarity === 'legendary');
+    }
+  });
+
+  test('chest gems, the pity counter and legendary freezes are saved', () => {
+    let p = initialProgress();
+    p.streak.freezes = 0;
+    const base = { lessonId: 'treble-1', xp: 10, ms: 1000, accuracy: 1, answers: [] };
+    p = finishLesson(p, { ...base, chest: { rarity: 'common', gems: 7, freeze: false } }, at('2026-09-24')).progress;
+    p = finishLesson(p, { ...base, chest: { rarity: 'common', gems: 9, freeze: false } }, at('2026-09-24')).progress;
+    expect(p.commonChests).toBe(2);
+    p = finishLesson(p, { ...base, chest: { rarity: 'legendary', gems: 100, freeze: true } }, at('2026-09-24')).progress;
+    expect(p.commonChests).toBe(0);
+    expect(p.gems).toBe(116);
+    expect(p.streak.freezes).toBe(1);
   });
 });

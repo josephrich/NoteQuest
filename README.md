@@ -23,7 +23,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap.
   notes come up more often.
 - **Rewards**:
   - XP, with ⚡ lightning bonuses for fast reads and 🔥 combo bonuses
-  - A gem chest after each lesson
+  - A treasure chest after each lesson with a random prize: Common (5–12 gems), Rare (15–25), Epic (30–50) or Legendary (100 gems + a streak freeze). A perfect lesson improves the odds, and four Common chests in a row guarantee a better one
   - A daily goal (10 minutes by default) that builds a 🔥 streak, protected by streak freezes 🧊
     (one earned per week of streak)
 - **Mistakes are gentle**: no lives. A wrong name is shown and asked again later. A wrong note says
