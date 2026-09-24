@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#5b3fd1">
+  <title>NoteQuest Mic Test</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎹</text></svg>">
+  <script type="module" crossorigin src="./assets/micTest--JCSw1-N.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/staff-bahQc0LO.js">
+  <link rel="stylesheet" crossorigin href="./assets/micTest-D3b0-sPA.css">
+</head>
+<body>
+  <header>
+    <h1>🎹 NoteQuest <span class="tag">Mic test</span></h1>
+    <p class="sub">Checks whether the iPad can reliably hear notes and chords on your piano. <a href="./">← Back to NoteQuest</a></p>
+  </header>
+
+  <main>
+    <p id="insecure" class="warn" hidden>This page must be opened over <strong>https://</strong>, or the browser won't allow the microphone.</p>
+
+    <section class="card" aria-labelledby="mic-h">
+      <h2 id="mic-h"><span class="step">1</span> Microphone</h2>
+      <div class="row">
+        <button id="start" class="primary">Start listening</button>
+        <label class="check"><input type="checkbox" id="raw" checked> Raw audio (voice processing off)</label>
+      </div>
+      <p class="hint">Put the iPad on the music stand. Turn "Raw audio" off later to compare with Safari's default processing.</p>
+      <div class="live" aria-live="off">
+        <div class="meter" aria-hidden="true"><div id="level"></div></div>
+        <div class="hearing"><span class="muted">Hearing</span> <strong id="heard-note">–</strong> <span id="heard-detail" class="muted"></span></div>
+      </div>
+      <details>
+        <summary>Diagnostics</summary>
+        <pre id="diag">Not started.</pre>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="cal-h">
+      <h2 id="cal-h"><span class="step">2</span> Tune to your piano</h2>
+      <p>Play the <strong>A above middle C</strong> three times, a second apart.</p>
+      <div class="row">
+        <button id="calibrate">Calibrate</button>
+        <button id="cal-reset" class="ghost">Reset to A = 440</button>
+        <span id="cal-status" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="test-h">
+      <h2 id="test-h"><span class="step">3</span> Test</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-notes" aria-selected="true">Single notes</button>
+        <button role="tab" id="tab-chords" aria-selected="false">Chords</button>
+      </div>
+
+      <div id="opts-notes" class="opts">
+        <label class="check"><input type="checkbox" name="clef" value="treble" checked> Treble</label>
+        <label class="check"><input type="checkbox" name="clef" value="bass" checked> Bass</label>
+        <label class="check"><input type="checkbox" id="accidentals"> Sharps &amp; flats</label>
+      </div>
+      <div id="opts-chords" class="opts" hidden>
+        <span class="muted">Keys:</span>
+        <label class="check"><input type="checkbox" name="key" value="C" checked> C</label>
+        <label class="check"><input type="checkbox" name="key" value="G" checked> G</label>
+        <label class="check"><input type="checkbox" name="key" value="F" checked> F</label>
+        <label class="check"><input type="checkbox" name="key" value="D"> D</label>
+        <label class="check"><input type="checkbox" name="key" value="A"> A</label>
+        <label class="check"><input type="checkbox" name="key" value="Bb"> B♭</label>
+        <label class="check"><input type="checkbox" name="key" value="Eb"> E♭</label>
+        <label class="check"><input type="checkbox" name="chordclef" value="bass"> Bass clef too</label>
+        <label class="check"><input type="checkbox" id="inversions"> Inversions</label>
+      </div>
+
+      <div class="stage">
+        <div id="staff" class="staff"></div>
+        <p id="target-label" class="target-label"></p>
+        <p id="feedback" class="feedback" aria-live="polite">Start the microphone to begin.</p>
+        <div id="chroma" class="chroma" hidden aria-hidden="true"></div>
+      </div>
+      <div class="row">
+        <button id="next">Skip / next</button>
+        <button id="flag" class="ghost" disabled>✗ The app judged that wrong</button>
+        <label class="check"><input type="checkbox" id="reveal"> Show note name</label>
+      </div>
+      <p class="hint">Play some deliberately wrong notes too. Tap <strong>"The app judged that wrong"</strong> whenever it marks a right note wrong or accepts a wrong one. That's how we measure accuracy.</p>
+    </section>
+
+    <section class="card" aria-labelledby="res-h">
+      <h2 id="res-h"><span class="step">4</span> Results</h2>
+      <div class="table-wrap">
+        <table id="stats">
+          <thead><tr><th>Test</th><th>Audio</th><th>Attempts</th><th>App accuracy</th><th>Octave slips</th><th>Median read time</th><th>Median detect time</th></tr></thead>
+          <tbody><tr><td colspan="7" class="muted">No attempts yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="row">
+        <button id="copy">Copy results</button>
+        <button id="download" class="ghost">Download JSON</button>
+        <button id="clear" class="ghost">Clear</button>
+        <span id="copy-status" class="muted"></span>
+      </div>
+      <details>
+        <summary>Attempt log</summary>
+        <ol id="log" reversed></ol>
+      </details>
+    </section>
+  </main>
+</body>
+</html>
