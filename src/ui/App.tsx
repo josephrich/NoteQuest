@@ -5,13 +5,15 @@ import { Home } from './Home';
 import { LessonScreen } from './Lesson';
 import { Results, type ResultsData } from './Results';
 import { Parent } from './Parent';
+import { Shop } from './Shop';
 import { setSoundEnabled } from './sound';
 
 export type Screen =
   | { name: 'home' }
   | { name: 'lesson'; lessonId: string; mic: boolean; run: number }
   | { name: 'results'; data: ResultsData }
-  | { name: 'parent' };
+  | { name: 'parent' }
+  | { name: 'shop' };
 
 export function App() {
   const { progress } = useProgress();
@@ -29,5 +31,7 @@ export function App() {
       return <Results data={screen.data} go={setScreen} />;
     case 'parent':
       return <Parent go={setScreen} />;
+    case 'shop':
+      return <Shop go={setScreen} />;
   }
 }

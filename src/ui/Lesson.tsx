@@ -1,7 +1,7 @@
 // A lesson: a run of challenges, judged from the microphone or from taps.
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { Staff } from './Staff';
-import { Dragon } from './Dragon';
+import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
@@ -137,7 +137,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
 
         {c.kind === 'meet' && (
           <div className="meet">
-            <Dragon mood="think" size={72} />
+            <MyDragon mood="think" size={72} />
             <p>{noteTip(c.items[0])}</p>
           </div>
         )}

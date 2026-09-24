@@ -2,6 +2,8 @@
 import { LESSON_ORDER, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
 import type { ChestRoll } from './rewards';
+import { initialShop, type Claim, type Prize, type ShopState } from './shop';
+import { storage } from '../platform/storage';
 
 export interface DayLog {
   xp: number;
@@ -21,6 +23,10 @@ export interface Progress {
   lessons: Record<string, { completed: number; bestAccuracy: number }>;
   items: Record<ItemId, ItemStat>;
   settings: { refA4: number; dailyGoalMin: number; sound: boolean };
+  shop: ShopState;
+  // Real-world prizes a grown-up has set up, and the ones he has claimed.
+  prizes: Prize[];
+  claims: Claim[];
 }
 
 export function initialProgress(refA4 = 440): Progress {
@@ -35,6 +41,9 @@ export function initialProgress(refA4 = 440): Progress {
     lessons: {},
     items: {},
     settings: { refA4, dailyGoalMin: 10, sound: true },
+    shop: initialShop(),
+    prizes: [],
+    claims: [],
   };
 }
 
@@ -156,13 +165,15 @@ const STORAGE_KEY = 'nq.progress.v1';
 
 export function loadProgress(): Progress {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storage.get(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Progress;
-      if (parsed.version === 1) return { ...initialProgress(), ...parsed, settings: { ...initialProgress().settings, ...parsed.settings } };
+      // Fill in anything added since this progress was saved.
+      const base = initialProgress();
+      if (parsed.version === 1) return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings }, shop: { ...base.shop, ...parsed.shop } };
     }
     // Carry over the tuning from the mic test page if it was done first.
-    const ref = Number(JSON.parse(localStorage.getItem('nq.refA4') ?? 'null'));
+    const ref = Number(JSON.parse(storage.get('nq.refA4') ?? 'null'));
     return initialProgress(ref > 400 && ref < 480 ? ref : 440);
   } catch {
     return initialProgress();
@@ -170,9 +181,5 @@ export function loadProgress(): Progress {
 }
 
 export function saveProgress(p: Progress): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  } catch {
-    /* storage unavailable (e.g. private browsing); progress lasts for this session only */
-  }
+  storage.set(STORAGE_KEY, JSON.stringify(p));
 }

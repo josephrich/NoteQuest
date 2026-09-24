@@ -6,6 +6,7 @@ import { freqToMidiFloat, midiName } from '../engine/music';
 import { dayKey, initialProgress } from '../game/progress';
 import { itemClef, itemNote, type ItemId } from '../game/content';
 import { spell } from '../engine/music';
+import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import type { Screen } from './App';
 
 function Gate({ onPass, onCancel }: { onPass: () => void; onCancel: () => void }) {
@@ -176,6 +177,79 @@ function Activity() {
   );
 }
 
+const EMOJIS = ['🎁', '🍕', '🍦', '🎮', '🌙', '🛝', '🎬', '📚', '⚽', '🧸'];
+
+function Prizes() {
+  const { progress, update } = useProgress();
+  const [emoji, setEmoji] = useState('🎁');
+  const [name, setName] = useState('');
+  const [cost, setCost] = useState('300');
+  const pending = progress.claims.filter((c) => !c.given);
+  const player = progress.profile?.name ?? 'Your child';
+
+  return (
+    <section className="card">
+      <h2>Prizes</h2>
+      <p className="muted">
+        Real-world rewards {player} can claim with gems. A lesson earns about 15–20 gems from its chest, so 300 gems is roughly 15–20 lessons.
+      </p>
+
+      {pending.length > 0 && (
+        <div className="claims">
+          <strong>Waiting for you</strong>
+          {pending.map((c) => (
+            <div key={c.id} className="claim-row">
+              <span>
+                {c.emoji} {c.name} <span className="muted">· {new Date(c.at).toLocaleDateString()}</span>
+              </span>
+              <button className="btn btn-secondary" onClick={() => update((p) => markGiven(p, c.id))}>
+                Mark as given
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {progress.prizes.map((p) => (
+        <div key={p.id} className="claim-row">
+          <span>
+            {p.emoji} {p.name} · 💎 {p.cost}
+          </span>
+          <button className="btn btn-quiet" onClick={() => update((q) => removePrize(q, p.id))} aria-label={`Remove ${p.name}`}>
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <form
+        className="prize-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!name.trim() || !(Number(cost) > 0)) return;
+          update((p) => addPrize(p, { emoji, name: name.trim(), cost: Number(cost) }));
+          setName('');
+        }}
+      >
+        <select value={emoji} onChange={(e) => setEmoji(e.target.value)} aria-label="Prize icon">
+          {EMOJIS.map((e) => (
+            <option key={e}>{e}</option>
+          ))}
+        </select>
+        <input placeholder="Prize, e.g. Choose Friday dinner" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} aria-label="Prize name" />
+        <input inputMode="numeric" value={cost} onChange={(e) => setCost(e.target.value.replace(/\D/g, ''))} aria-label="Cost in gems" className="prize-cost" />
+        <button className="btn btn-primary">Add</button>
+      </form>
+      <div className="chips">
+        {PRIZE_IDEAS.filter((idea) => !progress.prizes.some((p) => p.name === idea.name)).map((idea) => (
+          <button key={idea.name} type="button" className="chip" onClick={() => update((p) => addPrize(p, idea))}>
+            + {idea.emoji} {idea.name} ({idea.cost})
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Parent({ go }: { go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
   const [open, setOpen] = useState(false);
@@ -207,6 +281,8 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <p className="muted">Slowest notes first. Under 1.5 s is fluent reading; over 2.5 s means he is still working it out.</p>
         <ReadingSpeeds />
       </section>
+
+      <Prizes />
 
       <Tuning />
 

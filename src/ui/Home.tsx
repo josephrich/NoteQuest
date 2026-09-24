@@ -1,6 +1,6 @@
 // Home: streak, gems, daily goal and the path of lessons.
 import { useState } from 'react';
-import { Dragon } from './Dragon';
+import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { greeting } from './lines';
 import { UNITS, itemLetter, type LessonDef, type UnitDef } from '../game/content';
@@ -67,20 +67,23 @@ export function Home({ go }: { go: (s: Screen) => void }) {
         <span className="pill pill-fire" title="Day streak">
           🔥 {streak}
         </span>
-        <span className="pill pill-gem" title="Gems">
+        <button className="pill pill-gem" title="Gems: open the shop" onClick={() => go({ name: 'shop' })}>
           💎 {progress.gems}
-        </span>
+        </button>
         <span className="pill pill-xp" title="Total XP">
           ⚡ {progress.xp}
         </span>
         <span className="spacer" />
+        <button className="btn btn-shop" onClick={() => go({ name: 'shop' })}>
+          🛍️ Shop
+        </button>
         <button className="btn btn-quiet" onClick={() => go({ name: 'parent' })}>
           ⚙︎ Grown-ups
         </button>
       </header>
 
       <section className="hero">
-        <Dragon mood={day.ms >= goal ? 'cheer' : 'happy'} size={130} title={progress.profile!.dragonName} />
+        <MyDragon mood={day.ms >= goal ? 'cheer' : 'happy'} size={130} title={progress.profile!.dragonName} />
         <div className="bubble">
           <strong>{progress.profile!.dragonName}:</strong> {greeting(progress.profile!.name, now.getHours(), streak)}
         </div>

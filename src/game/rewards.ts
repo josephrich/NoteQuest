@@ -38,3 +38,20 @@ export function rollChest({ perfect, commonStreak }: { perfect: boolean; commonS
   const gems = lo + Math.floor(rnd() * (hi - lo + 1));
   return { rarity, gems, freeze: rarity === 'legendary' };
 }
+
+// The odds as shown to players (before the pity rule), derived from the numbers above.
+function chances(boost: number): Record<Rarity, number> {
+  const legendary = ODDS.legendary * boost;
+  const epic = ODDS.epic * boost;
+  const rare = ODDS.rare * boost;
+  return { legendary, epic, rare, common: 1 - legendary - epic - rare };
+}
+
+const pct = (x: number) => Math.round(x * 1000) / 10;
+
+export const CHEST_ODDS = RARITIES.map((rarity) => ({
+  rarity,
+  gems: GEMS[rarity][0] === GEMS[rarity][1] ? `${GEMS[rarity][0]} gems + streak freeze` : `${GEMS[rarity][0]}–${GEMS[rarity][1]} gems`,
+  chance: pct(chances(1)[rarity]),
+  perfectChance: pct(chances(PERFECT_BOOST)[rarity]),
+}));

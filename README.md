@@ -6,7 +6,8 @@ iPad sits on the music stand and listens through its microphone. No MIDI needed.
 **Play it:** https://josephrich.github.io/NoteQuest/. In Safari on the iPad, use *Share › Add to
 Home Screen* for a full-screen app with the dragon icon.
 
-See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap.
+See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
+[`docs/APP_STORE.md`](docs/APP_STORE.md) for the plan to publish it on the App Store.
 
 ## What's in it (Phase 1)
 
@@ -26,6 +27,12 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap.
   - A treasure chest after each lesson with a random prize: Common (5–12 gems), Rare (15–25), Epic (30–50) or Legendary (100 gems + a streak freeze). A perfect lesson improves the odds, and four Common chests in a row guarantee a better one
   - A daily goal (10 minutes by default) that builds a 🔥 streak, protected by streak freezes 🧊
     (one earned per week of streak)
+- **Gem shop**:
+  - Dragon colours and accessories to try on and buy (hats, crown, glasses, bow tie…)
+  - Streak freezes
+  - Real-world **prizes** a grown-up sets up (e.g. "Choose Friday dinner"). The child claims one
+    with gems and the grown-up marks it as given
+  - Chest odds are published in the shop. Gems can only be earned, never bought
 - **Mistakes are gentle**: no lives. A wrong name is shown and asked again later. A wrong note says
   what was heard, with a hint after two misses and the answer after three.
 - **Grown-ups area** (behind a times-table question):
@@ -70,7 +77,8 @@ of 34. Median detection time was 67 ms for notes and 117 ms for chords.
 
 ```
 src/engine/   audio capture, pitch & chord detection, note events, music theory, staff drawing
-src/game/     course content, lesson building, lesson rules (XP/combos), progress & streaks
+src/game/     course content, lesson building, lesson rules (XP/combos), chests, shop, progress & streaks
+src/platform/ device storage (swap point for native storage in the App Store build)
 src/ui/       React screens: Welcome, Home, Lesson, Results, Parent; the Dragon
 src/mictest/  the Phase 0 microphone test page
 public/       icons and web app manifest

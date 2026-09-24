@@ -1,6 +1,6 @@
 // End of lesson: XP, stats, a gem chest and streak news.
 import { useMemo, useState } from 'react';
-import { Dragon } from './Dragon';
+import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { Chest } from './Chest';
 import { GoalRing } from './Home';
@@ -56,7 +56,7 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
     <div className="results" style={{ ['--unit' as string]: data.unitColor }}>
       <Confetti />
       {bigWin && <Confetti key="big" />}
-      <Dragon mood="cheer" size={150} />
+      <MyDragon mood="cheer" size={150} />
       <h1>{data.perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
       <p className="results-sub">{data.lessonTitle}</p>
 
