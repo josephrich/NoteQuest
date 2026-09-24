@@ -7,7 +7,7 @@ import './ui/app.css';
 
 // Test hook: with ?debug in the URL, window.__nq.note(midi) simulates playing a note.
 if (new URLSearchParams(location.search).has('debug')) {
-  (window as unknown as { __nq: unknown }).__nq = { note: (midi: number) => listener.simulate(midi) };
+  (window as unknown as { __nq: unknown }).__nq = { note: (midi: number) => listener.simulate(midi), micOn: () => listener.running };
 }
 
 createRoot(document.getElementById('root')!).render(

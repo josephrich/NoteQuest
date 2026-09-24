@@ -7,6 +7,7 @@ import { Results, type ResultsData } from './Results';
 import { Parent } from './Parent';
 import { Shop } from './Shop';
 import { setSoundEnabled } from './sound';
+import { listener } from '../engine/listener';
 
 export type Screen =
   | { name: 'home' }
@@ -20,6 +21,12 @@ export function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
 
   useEffect(() => setSoundEnabled(progress.settings.sound), [progress.settings.sound]);
+
+  // The microphone is only on during a lesson (and the sound check / tuning, which switch it off
+  // themselves). Leaving a lesson turns it off, which also clears the iPad's orange mic indicator.
+  useEffect(() => {
+    if (screen.name !== 'lesson') void listener.stop();
+  }, [screen.name]);
 
   if (!progress.profile) return <Welcome />;
   switch (screen.name) {

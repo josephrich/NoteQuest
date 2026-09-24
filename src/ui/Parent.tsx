@@ -68,6 +68,7 @@ function Tuning() {
           update((p) => ({ ...p, settings: { ...p.settings, refA4: ref } }));
           setMsg('Tuned!');
           setState('idle');
+          void listener.stop();
           return [];
         }
         setMsg(`Got it (${next.length} of 3)…`);

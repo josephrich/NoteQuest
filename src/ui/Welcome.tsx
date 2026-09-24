@@ -25,8 +25,10 @@ export function Welcome() {
     });
   }, [mic]);
 
-  const finish = () =>
+  const finish = () => {
+    void listener.stop();
     update((p) => ({ ...p, profile: { name: name.trim(), dragonName: dragonName.trim() || 'Ember' } }));
+  };
 
   const startMic = async () => {
     unlockSound();
