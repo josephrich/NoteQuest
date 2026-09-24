@@ -7,6 +7,7 @@ import { UNITS, itemLetter, type LessonDef, type UnitDef } from '../game/content
 import { currentStreak, goalMs, isUnlocked, nextLessonId, today } from '../game/progress';
 import { listener } from '../engine/listener';
 import { unlockSound } from './sound';
+import { REVIEW_ID, focusItems, friendlyName, reviewDoneToday, reviewUnlocked } from '../game/review';
 import type { Screen } from './App';
 
 // Horizontal offsets that make the path wind left and right.
@@ -97,6 +98,27 @@ export function Home({ go }: { go: (s: Screen) => void }) {
             {progress.streak.freezes > 0 && <div className="goal-sub">🧊 {progress.streak.freezes} streak freeze{progress.streak.freezes > 1 ? 's' : ''}</div>}
           </div>
         </div>
+      </section>
+
+      <section className={`review-card ${reviewDoneToday(progress, now) ? 'review-done' : ''}`} aria-labelledby="review-title">
+        <div className="review-icon" aria-hidden="true">
+          {reviewDoneToday(progress, now) ? '✅' : '🔁'}
+        </div>
+        <div className="review-text">
+          <h2 id="review-title">Daily Review</h2>
+          {!reviewUnlocked(progress) ? (
+            <p>Finish your first lesson to unlock a fresh practice mix every day.</p>
+          ) : reviewDoneToday(progress, now) ? (
+            <p>Done for today. Come back tomorrow for a new mix, or practise again for more XP!</p>
+          ) : (
+            <p>
+              A new mix of every note you know. Tricky notes today: <strong>{focusItems(progress.items).map(friendlyName).join(', ')}</strong>
+            </p>
+          )}
+        </div>
+        <button className={`btn ${reviewDoneToday(progress, now) ? 'btn-secondary' : 'btn-review'}`} disabled={!reviewUnlocked(progress) || starting} onClick={() => start(REVIEW_ID)}>
+          {reviewDoneToday(progress, now) ? 'Again' : 'Start'}
+        </button>
       </section>
 
       <main className="path">

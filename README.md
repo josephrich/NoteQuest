@@ -22,6 +22,9 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   - *Play these notes in order*: three-note bursts
 - **Adaptive practice**: every note's reading time and accuracy is tracked, and slow or missed
   notes come up more often.
+- **Daily Review**: a fresh 15-challenge mix every day from all the notes learned so far. It
+  focuses on the 3 trickiest notes (slowest or most missed), which are named on the home screen.
+  It never runs out, even after the course is finished.
 - **Rewards**:
   - XP, with ⚡ lightning bonuses for fast reads and 🔥 combo bonuses
   - A treasure chest after each lesson with a random prize: Common (5–12 gems), Rare (15–25), Epic (30–50) or Legendary (100 gems + a streak freeze). A perfect lesson improves the odds, and four Common chests in a row guarantee a better one

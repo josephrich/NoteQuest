@@ -93,6 +93,17 @@ h1, h2 { margin: 0; line-height: 1.15; }
 .goal-sub { color: var(--muted); }
 .goal-ring { color: var(--ink); flex: none; }
 
+.review-card {
+  display: flex; align-items: center; gap: 14px; margin: -4px 0 24px; padding: 14px 16px;
+  background: linear-gradient(135deg, #fff1e0, #ffe3c2); border: 2px solid #ffb865; border-radius: var(--radius); box-shadow: 0 4px 0 #ffcf99;
+}
+.review-card.review-done { background: #fff; border-color: var(--line); box-shadow: 0 4px 0 var(--line); }
+.review-icon { font-size: 2.2rem; }
+.review-text { flex: 1; }
+.review-text h2 { font-size: 1.2rem; }
+.review-text p { margin: 2px 0 0; color: #7a4a14; }
+.review-done .review-text p { color: var(--muted); }
+.btn-review { background: var(--fire); color: #fff; box-shadow: 0 4px 0 #d86a00; min-width: 96px; }
 .unit { margin-bottom: 28px; }
 .unit-banner { color: #fff; border-radius: var(--radius); padding: 16px 20px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12); }
 .unit-banner h2 { font-size: 1.35rem; }

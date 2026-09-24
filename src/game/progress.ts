@@ -1,5 +1,5 @@
 // Everything NoteQuest remembers, stored only on this device. Pure functions so they can be tested.
-import { LESSON_ORDER, type ItemId } from './content';
+import { LESSON_ORDER, REVIEW_ID, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
 import type { ChestRoll } from './rewards';
 import { initialShop, type Claim, type Prize, type ShopState } from './shop';
@@ -27,6 +27,8 @@ export interface Progress {
   // Real-world prizes a grown-up has set up, and the ones he has claimed.
   prizes: Prize[];
   claims: Claim[];
+  // Daily Review: the last day one was done, and how many in total.
+  review: { lastDay: string | null; total: number };
 }
 
 export function initialProgress(refA4 = 440): Progress {
@@ -44,6 +46,7 @@ export function initialProgress(refA4 = 440): Progress {
     shop: initialShop(),
     prizes: [],
     claims: [],
+    review: { lastDay: null, total: 0 },
   };
 }
 
@@ -137,10 +140,12 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
       commonChests: outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
       days: { ...p.days, [key]: day },
       streak,
-      lessons: {
-        ...p.lessons,
-        [outcome.lessonId]: { completed: prevLesson.completed + 1, bestAccuracy: Math.max(prevLesson.bestAccuracy, outcome.accuracy) },
-      },
+      // Reviews aren't course lessons, so they don't count towards unlocking the path.
+      lessons:
+        outcome.lessonId === REVIEW_ID
+          ? p.lessons
+          : { ...p.lessons, [outcome.lessonId]: { completed: prevLesson.completed + 1, bestAccuracy: Math.max(prevLesson.bestAccuracy, outcome.accuracy) } },
+      review: outcome.lessonId === REVIEW_ID ? { lastDay: key, total: p.review.total + 1 } : p.review,
       items,
     },
     goalReachedNow,

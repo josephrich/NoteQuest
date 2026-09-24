@@ -6,7 +6,8 @@ import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
 import { findLesson, itemClef, itemLetter, itemMidi, itemNote, noteTip } from '../game/content';
-import { buildLesson } from '../game/lesson';
+import { buildLesson, type Challenge, type ItemStat } from '../game/lesson';
+import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview } from '../game/review';
 import { LessonRun, type Feedback } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { listener } from '../engine/listener';
@@ -17,10 +18,17 @@ const COLORS = { done: '#2fbf71', missed: '#ff8a3d', current: '#7c5cff' };
 // Ignore sound that started before (or just as) a challenge appeared: it's the tail of the last note.
 const IGNORE_BEFORE_MS = 150;
 
+// A course lesson, or the Daily Review built fresh from the notes he knows.
+function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boolean): { title: string; color: string; challenges: Challenge[] } {
+  if (lessonId === REVIEW_ID) return { title: REVIEW_TITLE, color: REVIEW_COLOR, challenges: buildReview(stats, { mic }) };
+  const { unit, lesson } = findLesson(lessonId);
+  return { title: lesson.title, color: unit.color, challenges: buildLesson(lesson, stats, { mic }) };
+}
+
 export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boolean; go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
-  const { unit, lesson } = findLesson(lessonId);
-  const [run] = useState(() => new LessonRun(lessonId, buildLesson(lesson, progress.items, { mic }), performance.now()));
+  const [setup] = useState(() => lessonSetup(lessonId, progress.items, mic));
+  const [run] = useState(() => new LessonRun(lessonId, setup.challenges, performance.now()));
   const [, rerender] = useReducer((x: number) => x + 1, 0);
   const [message, setMessage] = useState<{ title: string; sub?: string } | null>(null);
   const [shake, setShake] = useState(0);
@@ -38,8 +46,8 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
     update(() => result.progress);
     sfx.complete();
     const data: ResultsData = {
-      lessonTitle: lesson.title,
-      unitColor: unit.color,
+      lessonTitle: setup.title,
+      unitColor: setup.color,
       xp: outcome.xp,
       chest: outcome.chest,
       accuracy: outcome.accuracy,
@@ -114,7 +122,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const answer = itemLetter(expected);
 
   return (
-    <div className="lesson" style={{ ['--unit' as string]: unit.color }}>
+    <div className="lesson" style={{ ['--unit' as string]: setup.color }}>
       <header className="lesson-top">
         <button className="btn btn-quiet btn-icon" onClick={quit} aria-label="Quit lesson">
           ✕

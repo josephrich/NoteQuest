@@ -186,5 +186,8 @@ export function findLesson(lessonId: string): { unit: UnitDef; lesson: LessonDef
   throw new Error(`unknown lesson ${lessonId}`);
 }
 
+// The Daily Review isn't part of the course path; it is built fresh from learned notes (see review.ts).
+export const REVIEW_ID = 'review';
+
 // Lessons in play order, used to work out which one is unlocked next.
 export const LESSON_ORDER: string[] = UNITS.flatMap((u) => u.lessons.map((l) => l.id));
