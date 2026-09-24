@@ -84,7 +84,8 @@ function tick() {
   const f = state.mic.read();
   const onset = onsets.update(f.t, f.rms);
   const pitch = detectPitch(f.pitchWindow, state.mic.sampleRate);
-  const noteEvent = noteTracker.update({ t: f.t, onset, silent: f.rms < onsets.gate, pitch });
+  const tracked = noteTracker.update({ t: f.t, onset, silent: f.rms < onsets.gate, pitch, rms: f.rms });
+  const noteEvent = tracked?.stage === 'heard' ? tracked : null;
 
   if (state.calibrating) {
     if (noteEvent) handleCalibration(noteEvent);

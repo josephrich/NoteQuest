@@ -75,6 +75,11 @@ use the deployed site or an https tunnel.
 - **Single notes**: the McLeod Pitch Method (`src/engine/pitch.ts`) on a 2048-sample window. A note is
   confirmed after a detected attack plus three consistent high-clarity readings
   (`src/engine/trackers.ts`). A repeat of the same note within 250 ms counts as the same key press.
+- **Voices vs piano**: talking often has a clear pitch too. A piano note's pitch is locked from the
+  moment it's struck and it only fades, while a voice drifts in pitch and holds or swells in volume.
+  A right note is accepted as soon as it's heard. A wrong note is only shown once it has held for
+  120 ms, with its pitch steady to within 15 cents and its volume fading from an early peak. In
+  synthetic tests, 0.5% of random speech passes this check, while every piano key does.
 - **Chords**: verified rather than transcribed (`src/engine/chord.ts`). Every expected note's
   fundamental must be present, and at least 80% of the spectral energy must be explained by the
   harmonics of those notes.

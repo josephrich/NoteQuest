@@ -48,6 +48,9 @@ export interface NoteEvent {
   freq: number;
   onsetT: number;
   t: number;
+  // 'heard': the first quick reading. 'sure': the same note has since held steady like a piano note
+  // (see NoteTracker), so it is safe to tell him he played it even if it's wrong.
+  stage: 'heard' | 'sure';
 }
 
 // Confirms a single note once several consecutive pitch readings agree. The clarity bar is high
@@ -56,57 +59,114 @@ export interface NoteEvent {
 //
 // A hard key strike can register as two attacks ~100ms apart (seen on a real iPad), so a repeat of
 // the same note within `repeatMs` of the previous one is treated as the same key press.
+//
+// Voices: speech often has a clear pitch too, so a parent talking can read as a note. A piano note
+// is different in two ways: its pitch is locked from the moment it's struck, and it only gets
+// quieter. A voice drifts in pitch and swells in volume. So each note is reported twice: 'heard' as
+// soon as it's confirmed, and 'sure' once it has held for `sureMs` with a steady pitch and no swell.
+// Lessons accept a right note when it's heard, but only mark a wrong note once it's sure.
 export class NoteTracker {
   refA4: number;
   private readonly minClarity: number;
   private readonly confirmFrames: number;
   private readonly settleMs: number;
   private readonly repeatMs: number;
+  private readonly sureMs: number;
+  private readonly maxDriftCents: number;
   private last: { midi: number; onsetT: number } | null = null;
   private onsetT: number | null = null;
   private candidate: { midi: number; count: number; firstT: number } | null = null;
+  // Readings of the current candidate note, and levels since the attack.
+  private readings: number[] = [];
+  private levels: { t: number; rms: number }[] = [];
+  // After 'heard': still watching the note to see if it is piano-like.
+  private following: NoteEvent | null = null;
   private done = false;
 
-  constructor({ refA4 = 440, minClarity = 0.9, confirmFrames = 3, settleMs = 25, repeatMs = 250 } = {}) {
+  constructor({ refA4 = 440, minClarity = 0.9, confirmFrames = 3, settleMs = 25, repeatMs = 250, sureMs = 120, maxDriftCents = 15 } = {}) {
     this.refA4 = refA4;
     this.minClarity = minClarity;
     this.confirmFrames = confirmFrames;
     this.settleMs = settleMs;
     this.repeatMs = repeatMs;
+    this.sureMs = sureMs;
+    this.maxDriftCents = maxDriftCents;
   }
 
   reset(): void {
     this.onsetT = null;
     this.candidate = null;
+    this.readings = [];
+    this.levels = [];
+    this.following = null;
     this.done = false;
   }
 
-  update({ t, onset, silent, pitch }: { t: number; onset: boolean; silent: boolean; pitch: Pitch | null }): NoteEvent | null {
-    if (onset) {
+  update({ t, onset, silent, pitch, rms = 0 }: { t: number; onset: boolean; silent: boolean; pitch: Pitch | null; rms?: number }): NoteEvent | null {
+    // A second attack on the note being followed is the same key press (see repeatMs), not a new note.
+    const reattack = onset && this.following !== null && t - this.following.onsetT < this.repeatMs && this.readsAs(pitch, this.following.midi);
+    if (onset && !reattack) {
+      this.reset();
       this.onsetT = t;
-      this.candidate = null;
-      this.done = false;
     } else if (silent) {
       this.reset();
       return null;
     }
+    if (this.onsetT !== null) this.levels.push({ t, rms });
+    if (this.following) return this.follow(t, pitch);
     if (this.done) return null;
     if (this.onsetT !== null && t - this.onsetT < this.settleMs) return null;
     if (!pitch || pitch.clarity < this.minClarity) {
       this.candidate = null;
+      this.readings = [];
       return null;
     }
     const mf = freqToMidiFloat(pitch.freq, this.refA4);
     const midi = Math.round(mf);
     if (this.candidate && this.candidate.midi === midi) this.candidate.count++;
-    else this.candidate = { midi, count: 1, firstT: t };
+    else {
+      this.candidate = { midi, count: 1, firstT: t };
+      this.readings = [];
+    }
+    this.readings.push(mf);
     if (this.candidate.count < this.confirmFrames) return null;
     this.done = true;
     const onsetT = this.onsetT ?? this.candidate.firstT;
     const echo = this.last !== null && this.last.midi === midi && onsetT - this.last.onsetT < this.repeatMs;
     this.last = { midi, onsetT };
     if (echo) return null;
-    return { midi, cents: Math.round((mf - midi) * 100), freq: pitch.freq, onsetT, t };
+    const ev: NoteEvent = { midi, cents: Math.round((mf - midi) * 100), freq: pitch.freq, onsetT, t, stage: 'heard' };
+    this.following = ev;
+    return ev;
+  }
+
+  private readsAs(pitch: Pitch | null, midi: number): boolean {
+    return pitch !== null && pitch.clarity >= this.minClarity && Math.round(freqToMidiFloat(pitch.freq, this.refA4)) === midi;
+  }
+
+  private follow(t: number, pitch: Pitch | null): NoteEvent | null {
+    const ev = this.following!;
+    const mf = pitch && pitch.clarity >= this.minClarity ? freqToMidiFloat(pitch.freq, this.refA4) : null;
+    if (mf === null || Math.round(mf) !== ev.midi) {
+      // The note faded, changed or wobbled before it could prove itself: not sure.
+      this.following = null;
+      return null;
+    }
+    this.readings.push(mf);
+    if (t - this.candidate!.firstT < this.sureMs) return null;
+    this.following = null;
+    return this.pianoLike() ? { ...ev, t, stage: 'sure' } : null;
+  }
+
+  private pianoLike(): boolean {
+    // Pitch locked: every reading within a small band.
+    const drift = (Math.max(...this.readings) - Math.min(...this.readings)) * 100;
+    if (drift > this.maxDriftCents) return false;
+    // Needs a real attack that peaks early and is already fading: a held voice stays loud.
+    if (this.onsetT === null || this.levels.length < 2) return false;
+    const peak = this.levels.reduce((a, b) => (b.rms > a.rms ? b : a));
+    const now = this.levels[this.levels.length - 1].rms;
+    return peak.t - this.onsetT <= 100 && now <= 0.92 * peak.rms;
   }
 }
 

@@ -34,6 +34,8 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const [shake, setShake] = useState(0);
   const [tapped, setTapped] = useState<string | null>(null);
   const shownAt = useRef(performance.now());
+  // The attack time of the last note acted on, so its later 'sure' report isn't judged again.
+  const handledOnset = useRef<number | null>(null);
   const levelRef = useRef<HTMLDivElement>(null);
   const advanceTimer = useRef<number | undefined>(undefined);
 
@@ -93,10 +95,17 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
 
   useEffect(() => {
     if (!listening) return;
-    return listener.onNote((ev) => {
-      if (ev.onsetT < shownAt.current + IGNORE_BEFORE_MS) return;
-      react(run.play(ev.midi, ev.onsetT));
-    });
+    return listener.onNote(
+      (ev) => {
+        if (ev.onsetT < shownAt.current + IGNORE_BEFORE_MS || ev.onsetT === handledOnset.current) return;
+        // A right note counts straight away. A wrong one is only shown once it has held steady like a
+        // piano note, so talking near the iPad doesn't get marked as a mistake.
+        if (ev.midi !== itemMidi(run.expected) && ev.stage !== 'sure') return;
+        handledOnset.current = ev.onsetT;
+        react(run.play(ev.midi, ev.onsetT));
+      },
+      { sure: true },
+    );
   });
 
   useEffect(() => {

@@ -43,3 +43,27 @@ export function addPiano(out: Float32Array, midis: number[], { sampleRate = 4800
   }
   return out;
 }
+
+// Crude synthetic voice: a harmonic buzz whose pitch glides from f0 to f1 (like speech intonation),
+// with a little vibrato, shaped by a soft attack that swells to full volume over `swell` seconds.
+export function addVoice(
+  out: Float32Array,
+  { f0 = 200, f1 = undefined as number | undefined, start = 0, duration = 0.4, swell = 0.08, vibratoCents = 15, sampleRate = 48000, gain = 0.15 } = {},
+) {
+  const fEnd = f1 ?? f0;
+  const s0 = Math.round(start * sampleRate);
+  const n = Math.round(duration * sampleRate);
+  let phase = 0;
+  for (let i = 0; i < n && s0 + i < out.length; i++) {
+    const t = i / sampleRate;
+    const glide = f0 * (fEnd / f0) ** (t / duration);
+    const f = glide * 2 ** ((vibratoCents * Math.sin(2 * Math.PI * 5.5 * t)) / 1200);
+    phase += (2 * Math.PI * f) / sampleRate;
+    const env = Math.min(1, t / swell) * Math.min(1, (duration - t) / 0.05);
+    let v = 0;
+    // Vowel-ish spectrum: strong low harmonics, a formant bump around the 3rd-4th.
+    for (let h = 1; h <= 10; h++) v += (h === 3 || h === 4 ? 0.8 : 1 / h) * Math.sin(h * phase);
+    out[s0 + i] += gain * env * v * 0.4;
+  }
+  return out;
+}

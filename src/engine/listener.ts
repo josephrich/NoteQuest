@@ -73,9 +73,16 @@ export class Listener {
     await this.mic.stop();
   }
 
-  onNote(fn: NoteListener): () => void {
-    this.noteSubs.add(fn);
-    return () => this.noteSubs.delete(fn);
+  // Each note arrives once, when first heard. With `sure: true` the listener also gets the later
+  // 'sure' event for piano-like notes (see NoteTracker), so it can treat wrong notes more carefully.
+  onNote(fn: NoteListener, { sure = false } = {}): () => void {
+    const sub: NoteListener = sure ? fn : (ev) => ev.stage === 'heard' && fn(ev);
+    this.noteSubs.add(sub);
+    return () => this.noteSubs.delete(sub);
+  }
+
+  private emitNote(ev: NoteEvent) {
+    this.noteSubs.forEach((fn) => fn(ev));
   }
 
   onLevel(fn: LevelListener): () => void {
@@ -97,8 +104,9 @@ export class Listener {
   // Pretend a note was played (used by automated tests via ?debug).
   simulate(midi: number): void {
     const t = performance.now();
-    const ev: NoteEvent = { midi, cents: 0, freq: 440 * 2 ** ((midi - 69) / 12), onsetT: t, t };
-    this.noteSubs.forEach((fn) => fn(ev));
+    const ev: NoteEvent = { midi, cents: 0, freq: 440 * 2 ** ((midi - 69) / 12), onsetT: t, t, stage: 'heard' };
+    this.emitNote(ev);
+    this.emitNote({ ...ev, stage: 'sure' });
   }
 
   private onVisibility = () => {
@@ -110,8 +118,8 @@ export class Listener {
     const f = this.mic.read();
     const onset = this.onsets.update(f.t, f.rms);
     const pitch = detectPitch(f.pitchWindow, this.mic.sampleRate);
-    const noteEvent = this.notes.update({ t: f.t, onset, silent: f.rms < this.onsets.gate, pitch });
-    if (noteEvent) this.noteSubs.forEach((fn) => fn(noteEvent));
+    const noteEvent = this.notes.update({ t: f.t, onset, silent: f.rms < this.onsets.gate, pitch, rms: f.rms });
+    if (noteEvent) this.emitNote(noteEvent);
     if (this.chordTarget) {
       const chordEvent = this.chords.update({ t: f.t, onset, mags: f.mags });
       if (chordEvent) this.chordSubs.forEach((fn) => fn(chordEvent));

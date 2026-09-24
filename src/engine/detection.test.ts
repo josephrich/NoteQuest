@@ -5,7 +5,7 @@ import { verifyChord } from './chord';
 import { magnitudeSpectrum } from './fft';
 import { freqToMidiFloat, midiName } from './music';
 import { OnsetDetector, NoteTracker, ChordTracker } from './trackers';
-import { pianoNotes, addPiano } from './test-synth';
+import { pianoNotes, addPiano, addVoice, seededRandom } from './test-synth';
 
 const SR = 48000;
 const PITCH_WINDOW = 2048;
@@ -84,6 +84,71 @@ function* frames(sig: Float32Array, { stepMs = 16 } = {}) {
   }
 }
 
+function track(sig: Float32Array) {
+  const onsets = new OnsetDetector();
+  const tracker = new NoteTracker();
+  const heard = [];
+  for (const f of frames(sig)) {
+    const onset = onsets.update(f.t, f.rms);
+    const pitch = detectPitch(f.window.subarray(FFT - PITCH_WINDOW), SR);
+    const ev = tracker.update({ t: f.t, onset, silent: f.rms < onsets.gate, pitch, rms: f.rms });
+    if (ev) heard.push(ev);
+  }
+  return heard;
+}
+
+test('piano notes become "sure" soon after they are heard', () => {
+  const sig = new Float32Array(Math.round(2.2 * SR));
+  addPiano(sig, [60], { start: 0.3, end: 1.03 });
+  addPiano(sig, [67], { start: 1.0, end: 1.55 });
+  addPiano(sig, [43], { start: 1.7 }); // low G2, whose level wobbles as it rings
+  const sure = track(sig).filter((e) => e.stage === 'sure');
+  assert.deepEqual(sure.map((e) => midiName(e.midi)), ['C4', 'G4', 'G2']);
+  for (const e of sure) assert.ok(e.t - e.onsetT < 250, `sure took ${e.t - e.onsetT}ms`);
+});
+
+test('talking is never "sure", so it cannot be marked as a wrong note', () => {
+  const voices = [
+    { f0: 210, f1: 150, duration: 0.35 }, // falling speech, woman or child
+    { f0: 110, f1: 135, duration: 0.3 }, // rising speech, man
+    { f0: 180, f1: 186, duration: 0.5, vibratoCents: 8 }, // a held vowel, drifting slightly
+    { f0: 220, f1: 220, duration: 0.6, vibratoCents: 0, swell: 0.15 }, // a perfectly steady sung note that swells
+    { f0: 130, f1: 128, duration: 0.25, vibratoCents: 5, swell: 0.12 }, // short, low "mm"
+  ];
+  for (const v of voices) {
+    const sig = new Float32Array(Math.round(1.2 * SR));
+    addVoice(sig, { ...v, start: 0.3 });
+    const events = track(sig);
+    assert.equal(events.filter((e) => e.stage === 'sure').length, 0, `voice ${JSON.stringify(v)} was sure: ${events.map((e) => midiName(e.midi) + ' ' + e.stage)}`);
+  }
+});
+
+test('random speech almost never passes as a piano note, and every piano key does', () => {
+  const rnd = seededRandom(3);
+  let sure = 0;
+  for (let i = 0; i < 150; i++) {
+    const f0 = 85 + rnd() * 250;
+    const sig = new Float32Array(Math.round(1.1 * SR));
+    const v = { f0, f1: f0 * 2 ** (((rnd() - 0.5) * 8) / 12), duration: 0.15 + rnd() * 0.5, swell: 0.02 + rnd() * 0.15, vibratoCents: rnd() * 25, gain: 0.05 + rnd() * 0.3 };
+    addVoice(sig, { ...v, start: 0.3 });
+    if (track(sig).some((e) => e.stage === 'sure')) sure++;
+  }
+  assert.ok(sure <= 2, `${sure} of 150 voices passed as piano`);
+  for (let midi = 38; midi <= 84; midi++) {
+    const sig = new Float32Array(Math.round(1.1 * SR));
+    addPiano(sig, [midi], { start: 0.3, gain: 0.05 }); // played softly
+    assert.ok(track(sig).some((e) => e.stage === 'sure' && e.midi === midi), `${midiName(midi)} never sure`);
+  }
+});
+
+test('talking over a ringing piano note does not make a sure wrong note', () => {
+  const sig = new Float32Array(Math.round(1.6 * SR));
+  addPiano(sig, [64], { start: 0.2 });
+  addVoice(sig, { f0: 200, f1: 160, start: 0.7, duration: 0.4, gain: 0.3 });
+  const sure = track(sig).filter((e) => e.stage === 'sure');
+  assert.deepEqual(sure.map((e) => midiName(e.midi)), ['E4']);
+});
+
 test('note tracker reports each played note once', () => {
   const sig = new Float32Array(Math.round(2.2 * SR));
   // Legato-ish: each key is released 30ms after the next one is struck.
@@ -97,7 +162,7 @@ test('note tracker reports each played note once', () => {
     const onset = onsets.update(f.t, f.rms);
     const pitch = detectPitch(f.window.subarray(FFT - PITCH_WINDOW), SR);
     const ev = tracker.update({ t: f.t, onset, silent: f.rms < onsets.gate, pitch });
-    if (ev) heard.push(ev);
+    if (ev?.stage === 'heard') heard.push(ev);
   }
   assert.deepEqual(heard.map((e) => midiName(e.midi)), ['C4', 'G4', 'F3']);
   for (const e of heard) assert.ok(e.t - e.onsetT < 150, `detection took ${e.t - e.onsetT}ms`);
@@ -111,7 +176,7 @@ test('a double attack on one key press is reported once', () => {
   for (let t = 0; t <= 900; t += 16) {
     const onset = t === 0 || t === 96 || t === 592;
     const ev = tracker.update({ t, onset, silent: false, pitch });
-    if (ev) events.push(ev.onsetT);
+    if (ev?.stage === 'heard') events.push(ev.onsetT);
   }
   assert.deepEqual(events, [0, 592]);
 });
