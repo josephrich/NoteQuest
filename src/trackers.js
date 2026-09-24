@@ -35,9 +35,13 @@ export class OnsetDetector {
 // Confirms a single note once several consecutive pitch readings agree. The clarity bar is high
 // because when a previous note is still ringing, the mixture reads as a low-clarity "phantom"
 // pitch (often an octave or fifth below both notes) for a few frames.
+//
+// A hard key strike can register as two attacks ~100ms apart (seen on a real iPad), so a repeat of
+// the same note within `repeatMs` of the previous one is treated as the same key press.
 export class NoteTracker {
-  constructor({ refA4 = 440, minClarity = 0.9, confirmFrames = 3, settleMs = 25 } = {}) {
-    Object.assign(this, { refA4, minClarity, confirmFrames, settleMs });
+  constructor({ refA4 = 440, minClarity = 0.9, confirmFrames = 3, settleMs = 25, repeatMs = 250 } = {}) {
+    Object.assign(this, { refA4, minClarity, confirmFrames, settleMs, repeatMs });
+    this.last = null;
     this.reset();
   }
 
@@ -70,7 +74,11 @@ export class NoteTracker {
     else this.candidate = { midi, count: 1, firstT: t };
     if (this.candidate.count < this.confirmFrames) return null;
     this.done = true;
-    return { midi, cents: Math.round((mf - midi) * 100), freq: pitch.freq, onsetT: this.onsetT ?? this.candidate.firstT, t };
+    const onsetT = this.onsetT ?? this.candidate.firstT;
+    const echo = this.last && this.last.midi === midi && onsetT - this.last.onsetT < this.repeatMs;
+    this.last = { midi, onsetT };
+    if (echo) return null;
+    return { midi, cents: Math.round((mf - midi) * 100), freq: pitch.freq, onsetT, t };
   }
 }
 

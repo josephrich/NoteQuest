@@ -103,6 +103,19 @@ test('note tracker reports each played note once', () => {
   for (const e of heard) assert.ok(e.t - e.onsetT < 150, `detection took ${e.t - e.onsetT}ms`);
 });
 
+test('a double attack on one key press is reported once', () => {
+  const tracker = new NoteTracker();
+  const pitch = { freq: 349.23, clarity: 0.98 }; // F4
+  const events = [];
+  // Attack at 0ms, a spurious second attack at 100ms, then a genuine repeat at 600ms.
+  for (let t = 0; t <= 900; t += 16) {
+    const onset = t === 0 || t === 96 || t === 592;
+    const ev = tracker.update({ t, onset, silent: false, pitch });
+    if (ev) events.push(ev.onsetT);
+  }
+  assert.deepEqual(events, [0, 592]);
+});
+
 test('chord tracker accepts the right chord and rejects a wrong one', () => {
   const run = (played, expected) => {
     const sig = new Float32Array(Math.round(1.2 * SR));
