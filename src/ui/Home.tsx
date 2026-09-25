@@ -51,7 +51,10 @@ export function Home({ go }: { go: (s: Screen) => void }) {
   const next = nextLessonId(progress);
   const [selected, setSelected] = useState<{ unit: UnitDef; lesson: LessonDef } | null>(null);
   const [starting, setStarting] = useState(false);
-  const useScreen = progress.settings.onScreenPiano && progress.settings.input === 'screen';
+  const screenOffered = !progress.settings.hideScreenPiano;
+  const useScreen = screenOffered && progress.settings.input === 'screen';
+  // Choosing the screen first shows a reminder that the real piano is the better way to learn.
+  const [askScreen, setAskScreen] = useState(false);
   const setInput = (input: 'piano' | 'screen') => update((p) => ({ ...p, settings: { ...p.settings, input } }));
 
   const start = async (lessonId: string) => {
@@ -110,15 +113,18 @@ export function Home({ go }: { go: (s: Screen) => void }) {
         </div>
       </section>
 
-      {progress.settings.onScreenPiano && (
-        <div className="input-switch" role="radiogroup" aria-label="Playing on">
-          <span>Playing on:</span>
-          <button role="radio" aria-checked={!useScreen} className={!useScreen ? 'on' : ''} onClick={() => setInput('piano')}>
-            🎹 Piano
-          </button>
-          <button role="radio" aria-checked={useScreen} className={useScreen ? 'on on-screen' : ''} onClick={() => setInput('screen')}>
-            📱 Screen <small>½ XP</small>
-          </button>
+      {screenOffered && (
+        <div className="input-choice">
+          <div className="input-switch" role="radiogroup" aria-label="Playing on">
+            <span>Playing on:</span>
+            <button role="radio" aria-checked={!useScreen} className={!useScreen ? 'on' : ''} onClick={() => setInput('piano')}>
+              🎹 Piano
+            </button>
+            <button role="radio" aria-checked={useScreen} className={useScreen ? 'on on-screen' : ''} onClick={() => !useScreen && setAskScreen(true)}>
+              📱 Screen <small>½ XP</small>
+            </button>
+          </div>
+          {useScreen && <p className="input-note">🎹 A real piano is the best way to learn. Switch back when you can!</p>}
         </div>
       )}
 
@@ -176,6 +182,32 @@ export function Home({ go }: { go: (s: Screen) => void }) {
           </section>
         ))}
       </main>
+
+      {askScreen && (
+        <div className="sheet-backdrop" onClick={() => setAskScreen(false)}>
+          <div className="sheet screen-ask" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Use the on-screen piano?">
+            <MyDragon mood="think" size={96} />
+            <h2>Away from the piano?</h2>
+            <p>
+              You can practise on the screen keyboard. But a real piano is the best way to learn: your fingers learn where the notes are, so you
+              can read without looking down.
+            </p>
+            <p className="muted">On-screen practice earns half XP and no ⚡ bonus.</p>
+            <button className="btn btn-primary btn-big" onClick={() => setAskScreen(false)}>
+              🎹 I'll use the piano
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setInput('screen');
+                setAskScreen(false);
+              }}
+            >
+              📱 Use the screen for now
+            </button>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="sheet-backdrop" onClick={() => setSelected(null)}>

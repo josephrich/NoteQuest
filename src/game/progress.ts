@@ -26,8 +26,9 @@ export interface Progress {
   items: Record<ItemId, ItemStat>;
   // reminderAt is minutes after midnight (iOS app only). unlockAll opens every lesson on the path.
   // readAloud reads explanations and questions aloud automatically, for younger players.
-  // onScreenPiano lets the player choose the on-screen piano (a grown-up switches it on); input is
-  // their current choice.
+  // input is whether they play on a real piano or the on-screen one; hideScreenPiano lets a grown-up
+  // take the on-screen choice away. (It replaces an earlier opt-in setting, so it starts shown for
+  // everyone.)
   settings: {
     refA4: number;
     dailyGoalMin: number;
@@ -36,7 +37,7 @@ export interface Progress {
     reminderAt: number;
     unlockAll: boolean;
     readAloud: boolean;
-    onScreenPiano: boolean;
+    hideScreenPiano: boolean;
     input: 'piano' | 'screen';
   };
   shop: ShopState;
@@ -58,7 +59,7 @@ export function initialProgress(refA4 = 440): Progress {
     streak: { count: 0, lastDay: null, freezes: 1, best: 0 },
     lessons: {},
     items: {},
-    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false, readAloud: false, onScreenPiano: false, input: 'piano' },
+    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false, readAloud: false, hideScreenPiano: false, input: 'piano' },
     shop: initialShop(),
     prizes: [],
     claims: [],

@@ -417,11 +417,11 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <label className="check">
           <input
             type="checkbox"
-            checked={progress.settings.onScreenPiano}
-            onChange={(e) => setSettings({ onScreenPiano: e.target.checked, input: e.target.checked ? progress.settings.input : 'piano' })}
+            checked={!progress.settings.hideScreenPiano}
+            onChange={(e) => setSettings({ hideScreenPiano: !e.target.checked, input: e.target.checked ? progress.settings.input : 'piano' })}
           />{' '}
-          Allow the on-screen piano{' '}
-          <span className="muted">(for practice away from the piano: half XP and no ⚡ bonus, so the real piano stays the best way to earn)</span>
+          Show the on-screen piano option{' '}
+          <span className="muted">(for practice away from the piano: half XP and no ⚡ bonus. Untick to keep practice on the real piano)</span>
         </label>
         {speechSupported && <VoiceCheck />}
         {speechSupported && (

@@ -40,8 +40,10 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   recordings made with OpenAI text-to-speech where they exist (see *Voice recordings* below), and
   the device's voice otherwise. Note listening pauses
   while the voice talks, and note letters are pronounced as letters ("A" as "ay").
-- **On-screen piano** (📱, for practice away from the piano): a grown-up allows it per player, then
-  the home screen has a *Playing on: Piano / Screen* switch. It's a fixed-range keyboard for each
+- **On-screen piano** (📱, for practice away from the piano): the home screen has a *Playing on:
+  Piano / Screen* switch, set to Piano by default. Choosing Screen first shows a reminder that a
+  real piano is the best way to learn, and a note stays under the switch while it's on. New players
+  can pick it at setup ("No piano nearby?"), and grown-ups can hide the option per player. It's a fixed-range keyboard for each
   clef (A3–C6 treble, D2–E4 bass) with a synthesised piano sound and no letters on the keys (only
   middle C's dot), so it's still a reading exercise. It earns half XP and no ⚡ bonus, its timings
   don't count towards reading speeds, and the practice chart shows on-screen time striped. If the

@@ -440,3 +440,9 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 .activity-bar { position: relative; overflow: hidden; }
 .activity-screen { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.55) 0 4px, transparent 4px 8px); }
 .activity-legend { margin: 6px 0 0; font-size: 0.9rem; }
+.input-choice { margin: 4px 0 14px; }
+.input-choice .input-switch { margin: 0; }
+.input-note { margin: 6px 0 0; font-weight: 700; color: var(--screen); }
+.screen-ask { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.screen-ask h2 { margin: 0; }
+.screen-ask p { margin: 0; font-size: 1.1rem; }

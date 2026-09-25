@@ -26,9 +26,9 @@ export function Welcome({ onDone, onCancel }: { onDone?: () => void; onCancel?: 
     });
   }, [mic]);
 
-  const finish = () => {
+  const finish = (input: 'piano' | 'screen' = 'piano') => {
     void listener.stop();
-    update((p) => ({ ...p, profile: { name: name.trim(), dragonName: dragonName.trim() || 'Ember' } }));
+    update((p) => ({ ...p, profile: { name: name.trim(), dragonName: dragonName.trim() || 'Ember' }, settings: { ...p.settings, input } }));
     onDone?.();
   };
 
@@ -114,14 +114,19 @@ export function Welcome({ onDone, onCancel }: { onDone?: () => void; onCancel?: 
           {mic === 'listening' && <p className="pulse">Play any note on the piano…</p>}
           {mic === 'failed' && <p>I couldn't use the microphone. You can still practise on the on-screen piano, and a grown-up can allow the microphone later in the iPad's Settings.</p>}
           {(mic === 'heard' || mic === 'failed') && (
-            <button className="btn btn-primary btn-big" onClick={finish}>
+            <button className="btn btn-primary btn-big" onClick={() => finish()}>
               Let's go!
             </button>
           )}
           {(mic === 'idle' || mic === 'listening') && (
-            <button className="btn btn-link" onClick={finish}>
-              Skip for now
-            </button>
+            <>
+              <button className="btn btn-link" onClick={() => finish()}>
+                Skip for now
+              </button>
+              <button className="btn btn-link" onClick={() => finish('screen')}>
+                No piano nearby? Practise on the screen
+              </button>
+            </>
           )}
         </div>
       )}

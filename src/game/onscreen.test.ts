@@ -44,3 +44,11 @@ test('the on-screen keyboard has every note the course uses, in the right clef',
   const ranges = { treble: keyboardKeys('treble').map((k) => k.midi), bass: keyboardKeys('bass').map((k) => k.midi) };
   for (const unit of UNITS) for (const lesson of unit.lessons) for (const id of lesson.pool) expect(ranges[itemClef(id)], id).toContain(itemMidi(id));
 });
+
+test('the on-screen option is offered to everyone, including saves from the old opt-in setting', async () => {
+  const { parseProgress } = await import('./progress');
+  expect(initialProgress().settings.hideScreenPiano).toBe(false);
+  const old = { ...initialProgress(), settings: { ...initialProgress().settings, onScreenPiano: false } } as unknown as Parameters<typeof parseProgress>[0];
+  delete (old.settings as Partial<typeof old.settings>).hideScreenPiano;
+  expect(parseProgress(old).settings.hideScreenPiano).toBe(false);
+});
