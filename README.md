@@ -121,7 +121,7 @@ npm run voices -- --force       # re-record everything, e.g. with VOICE=nova npm
 npm run voices -- --dry-run     # list what would be recorded
 ```
 
-Recordings go in `public/voice/` and are listed in `src/voice/clips.json`; commit both. Editing a line
+Recordings go in `public/voice/` (MP3 audio named `.mpga`, which the iOS app serves reliably) and are listed in `src/voice/clips.json`; commit both. Editing a line
 changes its recording's name, so the next run re-records just that line and removes the old one. A
 line with no recording falls back to the device's voice. OpenAI's terms require telling users that
 the voice is AI-generated (see `docs/APP_STORE.md`).

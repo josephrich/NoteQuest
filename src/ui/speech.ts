@@ -75,16 +75,24 @@ export function stopSpeaking(): void {
   notify(null);
 }
 
+// Recordings are MP3s, named .mpga (the other standard extension for MP3 audio) rather than .mp3:
+// inside the iOS app, Capacitor serves .mp3 files as "media" without an HTTP status, which fetch
+// treats as a failure. Any other extension is served normally.
+const CLIP_EXT = 'mpga';
+
 // Recordings come out quiet, so each is turned up to near full volume (by its own peak) as it plays.
 const TARGET_PEAK = 0.9;
 
 function loadClip(ctx: AudioContext, id: string): Promise<{ buffer: AudioBuffer; gain: number }> {
   let p = buffers.get(id);
   if (!p) {
-    p = fetch(`./voice/${id}.mp3`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`couldn't load the recording (${r.status})`);
-        return r.arrayBuffer();
+    p = fetch(`./voice/${id}.${CLIP_EXT}`)
+      .then(async (r) => {
+        // Inside the iOS app, Capacitor serves audio files without an HTTP status, so they arrive
+        // with status 0. That's fine as long as the file itself came through.
+        const data = r.ok || r.status === 0 ? await r.arrayBuffer() : null;
+        if (!data?.byteLength) throw new Error(`couldn't load the recording (status ${r.status})`);
+        return data;
       })
       .then((data) => ctx.decodeAudioData(data))
       .then((buffer) => {

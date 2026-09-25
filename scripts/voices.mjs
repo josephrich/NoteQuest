@@ -1,4 +1,4 @@
-// Records the app's read-aloud lines with OpenAI's text-to-speech, into public/voice/<id>.mp3, and
+// Records the app's read-aloud lines with OpenAI's text-to-speech, into public/voice/<id>.mpga, and
 // lists them in src/voice/clips.json so the app knows which lines have a recording.
 //
 //   npm run voices                 record new or changed lines only (asks for your OpenAI API key)
@@ -12,13 +12,16 @@
 // Recordings that no longer match any line are deleted. Lines without a recording use the device's
 // voice in the app, so this never has to be run for the app to work.
 import { createServer } from 'vite';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const outDir = join(root, 'public/voice');
+// MP3 audio, but named .mpga: the iOS app's file server mishandles .mp3 for fetch (see speech.ts).
+const EXT = 'mpga';
+const clipFile = (id) => join(outDir, `${id}.${EXT}`);
 const indexFile = join(root, 'src/voice/clips.json');
 const force = process.argv.includes('--force');
 const dryRun = process.argv.includes('--dry-run');
@@ -43,7 +46,12 @@ try {
 }
 
 const clips = lines.map((text) => ({ text, id: clipId(text), input: speakable(text) }));
-const todo = clips.filter((c) => force || !existsSync(join(outDir, `${c.id}.mp3`)));
+// Recordings made before the switch to .mpga just need renaming.
+for (const c of clips) {
+  const old = join(outDir, `${c.id}.mp3`);
+  if (existsSync(old) && !existsSync(clipFile(c.id))) renameSync(old, clipFile(c.id));
+}
+const todo = clips.filter((c) => force || !existsSync(clipFile(c.id)));
 const chars = todo.reduce((n, c) => n + c.input.length, 0);
 console.log(`${clips.length} lines, ${todo.length} to record (${chars} characters), voice "${voice}", model ${model}.`);
 
@@ -83,7 +91,7 @@ async function record(c) {
       body: JSON.stringify({ model, voice, input: c.input, instructions: INSTRUCTIONS, response_format: 'mp3' }),
     });
     if (res.ok) {
-      writeFileSync(join(outDir, `${c.id}.mp3`), Buffer.from(await res.arrayBuffer()));
+      writeFileSync(clipFile(c.id), Buffer.from(await res.arrayBuffer()));
       return;
     }
     const detail = await res.text();
@@ -120,12 +128,13 @@ if (todo.length) process.stdout.write('\n');
 const wanted = new Set(clips.map((c) => c.id));
 let removed = 0;
 for (const f of readdirSync(outDir)) {
-  if (f.endsWith('.mp3') && !wanted.has(f.slice(0, -4))) {
+  const [name, ext] = f.split('.');
+  if ((ext === EXT || ext === 'mp3') && !(ext === EXT && wanted.has(name))) {
     rmSync(join(outDir, f));
     removed++;
   }
 }
-const available = [...new Set(clips.map((c) => c.id).filter((id) => existsSync(join(outDir, `${id}.mp3`))))].sort();
+const available = [...new Set(clips.map((c) => c.id).filter((id) => existsSync(clipFile(id))))].sort();
 writeFileSync(indexFile, JSON.stringify(available) + '\n');
 if (failure) {
   console.error(`Stopped: ${failure.message}`);
