@@ -44,6 +44,9 @@ For TestFlight: **Product › Archive › Distribute App › App Store Connect**
   IP Australia's trademark database before investing heavily in the name.
 - **Listing text**: avoid presenting the app as official AMEB material. Saying it "helps with
   note reading for AMEB and other grade exams" is safer than using the AMEB name or logo.
+- **Review notes**: App Review won't have a piano. Say in the review notes that lessons listen to
+  a real piano through the microphone, and that without one (or with the microphone declined) they
+  can use the on-screen piano, which a grown-up can also enable in Grown-ups (the times-table gate).
 - **AI voice disclosure**: the read-aloud recordings are made with OpenAI text-to-speech, whose
   terms require telling users the voice is AI-generated. Include a line such as "Read-aloud voice
   is AI-generated" in the description (the app also says so in the Grown-ups area).

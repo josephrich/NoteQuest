@@ -423,3 +423,20 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 /* Piano keys under the staff */
 .keyboard { display: block; width: 100%; max-width: 520px; margin: 4px auto 0; }
 .meet .btn-speak { margin-left: auto; }
+
+/* On-screen piano */
+:root { --screen: #0f9d8f; --screen-soft: #dff5f1; }
+.lesson[data-mode="screen"]::before { background: var(--screen-soft); }
+.lesson[data-mode="screen"] .staff-card { border-color: var(--screen); }
+.mode-screen { background: var(--screen); }
+.play-keyboard { display: block; width: 100%; max-width: 760px; margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.play-keyboard-off { opacity: 0.6; pointer-events: none; }
+.input-switch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 800; color: var(--muted); margin: 4px 0 14px; }
+.input-switch button { font: inherit; font-weight: 800; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+.input-switch button.on { border-color: #1f8fd1; background: #e3f3fc; }
+.input-switch button.on-screen { border-color: var(--screen); background: var(--screen-soft); }
+.input-switch small { color: var(--muted); font-weight: 700; }
+.results-screen { margin: -4px 0 0; font-weight: 700; color: var(--screen); text-align: center; }
+.activity-bar { position: relative; overflow: hidden; }
+.activity-screen { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.55) 0 4px, transparent 4px 8px); }
+.activity-legend { margin: 6px 0 0; font-size: 0.9rem; }

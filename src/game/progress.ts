@@ -9,6 +9,8 @@ export interface DayLog {
   xp: number;
   ms: number;
   lessons: number;
+  // The part of `ms` practised on the on-screen piano rather than a real one.
+  screenMs?: number;
 }
 
 export interface Progress {
@@ -24,7 +26,19 @@ export interface Progress {
   items: Record<ItemId, ItemStat>;
   // reminderAt is minutes after midnight (iOS app only). unlockAll opens every lesson on the path.
   // readAloud reads explanations and questions aloud automatically, for younger players.
-  settings: { refA4: number; dailyGoalMin: number; sound: boolean; reminders: boolean; reminderAt: number; unlockAll: boolean; readAloud: boolean };
+  // onScreenPiano lets the player choose the on-screen piano (a grown-up switches it on); input is
+  // their current choice.
+  settings: {
+    refA4: number;
+    dailyGoalMin: number;
+    sound: boolean;
+    reminders: boolean;
+    reminderAt: number;
+    unlockAll: boolean;
+    readAloud: boolean;
+    onScreenPiano: boolean;
+    input: 'piano' | 'screen';
+  };
   shop: ShopState;
   // Real-world prizes a grown-up has set up, and the ones he has claimed.
   prizes: Prize[];
@@ -44,7 +58,7 @@ export function initialProgress(refA4 = 440): Progress {
     streak: { count: 0, lastDay: null, freezes: 1, best: 0 },
     lessons: {},
     items: {},
-    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false, readAloud: false },
+    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false, readAloud: false, onScreenPiano: false, input: 'piano' },
     shop: initialShop(),
     prizes: [],
     claims: [],
@@ -92,6 +106,8 @@ export interface LessonOutcome {
   ms: number;
   accuracy: number;
   answers: { id: ItemId; correct: boolean; ms: number | null }[];
+  // Played on the on-screen piano.
+  onScreen?: boolean;
 }
 
 export interface FinishResult {
@@ -105,7 +121,12 @@ export interface FinishResult {
 export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): FinishResult {
   const key = dayKey(now);
   const before = today(p, now);
-  const day: DayLog = { xp: before.xp + outcome.xp, ms: before.ms + outcome.ms, lessons: before.lessons + 1 };
+  const day: DayLog = {
+    xp: before.xp + outcome.xp,
+    ms: before.ms + outcome.ms,
+    lessons: before.lessons + 1,
+    screenMs: (before.screenMs ?? 0) + (outcome.onScreen ? outcome.ms : 0),
+  };
   const items = { ...p.items };
   for (const a of outcome.answers) items[a.id] = updateStat(items[a.id], { correct: a.correct, ms: a.ms, now: now.getTime() });
   const prevLesson = p.lessons[outcome.lessonId] ?? { completed: 0, bestAccuracy: 0 };

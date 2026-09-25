@@ -15,7 +15,8 @@ import { listener } from '../engine/listener';
 
 export type Screen =
   | { name: 'home' }
-  | { name: 'lesson'; lessonId: string; mic: boolean; run: number }
+  // `screen`: played on the on-screen piano instead of a real one (heard through `mic`).
+  | { name: 'lesson'; lessonId: string; mic: boolean; screen: boolean; run: number }
   | { name: 'results'; data: ResultsData }
   | { name: 'parent' }
   | { name: 'shop' }
@@ -55,8 +56,8 @@ export function App() {
       return <Home go={setScreen} />;
     case 'lesson':
       if (screen.lessonId !== REVIEW_ID && findLesson(screen.lessonId).lesson.guide)
-        return <GuideScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} go={setScreen} />;
-      return <LessonScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} go={setScreen} />;
+        return <GuideScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} onScreen={screen.screen} go={setScreen} />;
+      return <LessonScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} onScreen={screen.screen} go={setScreen} />;
     case 'results':
       return <Results data={screen.data} go={setScreen} />;
     case 'parent':

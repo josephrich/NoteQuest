@@ -42,7 +42,7 @@ export function GoalRing({ fraction, label, size = 96 }: { fraction: number; lab
 }
 
 export function Home({ go }: { go: (s: Screen) => void }) {
-  const { progress } = useProgress();
+  const { progress, update } = useProgress();
   const now = new Date();
   const streak = currentStreak(progress, now);
   const day = today(progress, now);
@@ -51,19 +51,22 @@ export function Home({ go }: { go: (s: Screen) => void }) {
   const next = nextLessonId(progress);
   const [selected, setSelected] = useState<{ unit: UnitDef; lesson: LessonDef } | null>(null);
   const [starting, setStarting] = useState(false);
+  const useScreen = progress.settings.onScreenPiano && progress.settings.input === 'screen';
+  const setInput = (input: 'piano' | 'screen') => update((p) => ({ ...p, settings: { ...p.settings, input } }));
 
   const start = async (lessonId: string) => {
     unlockSound();
     unlockSpeech();
     setStarting(true);
-    // Starting the mic needs this tap; if it fails the lesson becomes tap-only.
-    let mic = true;
+    // The on-screen piano, if a grown-up allows it and it's chosen, needs no microphone.
+    if (useScreen) return go({ name: 'lesson', lessonId, mic: false, screen: true, run: Date.now() });
+    // Starting the mic needs this tap. Without a microphone, the on-screen piano stands in.
     try {
       await listener.start();
+      go({ name: 'lesson', lessonId, mic: true, screen: false, run: Date.now() });
     } catch {
-      mic = false;
+      go({ name: 'lesson', lessonId, mic: false, screen: true, run: Date.now() });
     }
-    go({ name: 'lesson', lessonId, mic, run: Date.now() });
   };
 
   return (
@@ -106,6 +109,18 @@ export function Home({ go }: { go: (s: Screen) => void }) {
           </div>
         </div>
       </section>
+
+      {progress.settings.onScreenPiano && (
+        <div className="input-switch" role="radiogroup" aria-label="Playing on">
+          <span>Playing on:</span>
+          <button role="radio" aria-checked={!useScreen} className={!useScreen ? 'on' : ''} onClick={() => setInput('piano')}>
+            🎹 Piano
+          </button>
+          <button role="radio" aria-checked={useScreen} className={useScreen ? 'on on-screen' : ''} onClick={() => setInput('screen')}>
+            📱 Screen <small>½ XP</small>
+          </button>
+        </div>
+      )}
 
       <section className={`review-card ${reviewDoneToday(progress, now) ? 'review-done' : ''}`} aria-labelledby="review-title">
         <div className="review-icon" aria-hidden="true">

@@ -112,7 +112,7 @@ export function Welcome({ onDone, onCancel }: { onDone?: () => void; onCancel?: 
           )}
           {mic === 'starting' && <p>Asking for the microphone…</p>}
           {mic === 'listening' && <p className="pulse">Play any note on the piano…</p>}
-          {mic === 'failed' && <p>I couldn't use the microphone. You can still practise by tapping note names, and a grown-up can turn it on later in Settings › Safari › Microphone.</p>}
+          {mic === 'failed' && <p>I couldn't use the microphone. You can still practise on the on-screen piano, and a grown-up can allow the microphone later in the iPad's Settings.</p>}
           {(mic === 'heard' || mic === 'failed') && (
             <button className="btn btn-primary btn-big" onClick={finish}>
               Let's go!

@@ -50,7 +50,16 @@ export class LessonRun {
   private answers: LessonOutcome['answers'] = [];
   private fastest: number | null = null;
 
-  constructor(lessonId: string, challenges: Challenge[], now: number, private rnd: () => number = Math.random) {
+  // `onScreen`: played on the on-screen piano instead of a real one. That earns half XP and no
+  // lightning bonus (tapping a screen is quicker than a real keyboard), and its timings aren't used
+  // for reading speeds.
+  constructor(
+    lessonId: string,
+    challenges: Challenge[],
+    now: number,
+    private rnd: () => number = Math.random,
+    readonly onScreen = false,
+  ) {
     this.lessonId = lessonId;
     this.queue = challenges;
     this.shownAt = now;
@@ -149,10 +158,11 @@ export class LessonRun {
   // `commonStreak` is how many plain chests he has had in a row.
   outcome(commonStreak: number): LessonOutcome & { perfect: boolean; bestCombo: number } {
     const perfect = this.scored > 0 && this.scoredCorrect === this.scored;
-    const bonus = XP.complete + (perfect ? XP.perfect : 0);
+    const bonus = this.scaled(XP.complete + (perfect ? XP.perfect : 0));
     return {
       lessonId: this.lessonId,
       xp: this.xp + bonus,
+      onScreen: this.onScreen,
       chest: rollChest({ perfect, commonStreak }, this.rnd),
       ms: this.activeMs,
       accuracy: this.accuracy,
@@ -213,6 +223,10 @@ export class LessonRun {
 
   private succeed(t: number, xp: number, lightning: boolean): Feedback {
     const c = this.current;
+    if (this.onScreen && lightning) {
+      xp -= XP.lightning;
+      lightning = false;
+    }
     let comboBonus = false;
     if (c.kind !== 'meet') {
       this.scored++;
@@ -228,6 +242,7 @@ export class LessonRun {
       const ms = t - this.shownAt;
       if (this.firstTryOk && c.kind !== 'burst') this.fastest = this.fastest === null ? ms : Math.min(this.fastest, ms);
     }
+    xp = this.scaled(xp);
     this.xp += xp;
     this.phase = 'correct';
     this.feedback = { correct: true, xp, lightning, comboBonus };
@@ -242,8 +257,12 @@ export class LessonRun {
     }
   }
 
+  private scaled(xp: number): number {
+    return this.onScreen ? Math.ceil(xp / 2) : xp;
+  }
+
   private record(id: ItemId, correct: boolean, ms: number | null) {
-    this.answers.push({ id, correct, ms });
+    this.answers.push({ id, correct, ms: this.onScreen ? null : ms });
   }
 
   private requeue(c: Challenge) {

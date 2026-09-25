@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { sfx } from './sound';
 
-export type Mode = 'tap' | 'play' | 'learn';
+export type Mode = 'tap' | 'play' | 'learn' | 'screen';
 
 const MODES: Record<Mode, { icon: string; text: string }> = {
   tap: { icon: '👆', text: 'Tap the answer' },
   play: { icon: '🎹', text: 'Play it on the piano' },
   learn: { icon: '📖', text: 'Learn' },
+  screen: { icon: '📱', text: 'Find it on the keyboard' },
 };
 
 export function ModeBanner({ mode, text }: { mode: Mode; text?: string }) {

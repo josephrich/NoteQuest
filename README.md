@@ -40,6 +40,12 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   recordings made with OpenAI text-to-speech where they exist (see *Voice recordings* below), and
   the device's voice otherwise. Note listening pauses
   while the voice talks, and note letters are pronounced as letters ("A" as "ay").
+- **On-screen piano** (📱, for practice away from the piano): a grown-up allows it per player, then
+  the home screen has a *Playing on: Piano / Screen* switch. It's a fixed-range keyboard for each
+  clef (A3–C6 treble, D2–E4 bass) with a synthesised piano sound and no letters on the keys (only
+  middle C's dot), so it's still a reading exercise. It earns half XP and no ⚡ bonus, its timings
+  don't count towards reading speeds, and the practice chart shows on-screen time striped. If the
+  microphone isn't available, lessons use it automatically instead of tap-only questions.
 - **Clear modes**: tapping (orange, 👆), playing (blue, 🎹) and learning (purple, 📖) each have
   their own banner and background tint. The banner pops and chimes when the mode changes, and
   questions come in blocks so the mode changes less often.

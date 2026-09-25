@@ -92,8 +92,8 @@ function Tuning() {
     <section className="card">
       <h2>Piano tuning</h2>
       <p>
-        A = {progress.settings.refA4.toFixed(1)} Hz ({cents === 0 ? 'in tune' : `${Math.abs(cents)} cents ${cents < 0 ? 'flat' : 'sharp'}`}). Re-tune if the piano has been tuned
-        or notes are being misheard.
+        A = {progress.settings.refA4.toFixed(1)} Hz ({cents === 0 ? 'in tune' : `${Math.abs(cents)} cents ${cents < 0 ? 'flat' : 'sharp'}`}). Re-tune if the
+        piano has been tuned or notes are being misheard.
       </p>
       <div className="row">
         <button
@@ -157,7 +157,9 @@ function ReadingSpeeds() {
                   </>
                 )}
               </td>
-              <td className={r.avgMs && r.avgMs > 2500 ? 'slow' : r.avgMs && r.avgMs < 1500 ? 'fast' : ''}>{r.avgMs ? `${(r.avgMs / 1000).toFixed(1)}s` : '–'}</td>
+              <td className={r.avgMs && r.avgMs > 2500 ? 'slow' : r.avgMs && r.avgMs < 1500 ? 'fast' : ''}>
+                {r.avgMs ? `${(r.avgMs / 1000).toFixed(1)}s` : '–'}
+              </td>
               <td>{Math.round(r.acc * 100)}%</td>
               <td>{r.seen}</td>
             </tr>
@@ -174,21 +176,28 @@ function Activity() {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
     const key = dayKey(d);
-    return { key, label: d.toLocaleDateString(undefined, { weekday: 'narrow' }), min: (progress.days[key]?.ms ?? 0) / 60_000 };
+    const log = progress.days[key];
+    return { key, label: d.toLocaleDateString(undefined, { weekday: 'narrow' }), min: (log?.ms ?? 0) / 60_000, screenMin: (log?.screenMs ?? 0) / 60_000 };
   });
   const goal = progress.settings.dailyGoalMin;
   const max = Math.max(goal, ...days.map((d) => d.min));
+  const anyScreen = days.some((d) => d.screenMin > 0);
   return (
-    <div className="activity" role="img" aria-label="Minutes practised over the last 14 days">
-      {days.map((d) => (
-        <div key={d.key} className="activity-day" title={`${d.key}: ${d.min.toFixed(1)} min`}>
-          <div className="activity-bar-wrap">
-            <div className={`activity-bar ${d.min >= goal ? 'met' : ''}`} style={{ height: `${(d.min / max) * 100}%` }} />
+    <>
+      <div className="activity" role="img" aria-label="Minutes practised over the last 14 days">
+        {days.map((d) => (
+          <div key={d.key} className="activity-day" title={`${d.key}: ${d.min.toFixed(1)} min${d.screenMin ? `, ${d.screenMin.toFixed(1)} on screen` : ''}`}>
+            <div className="activity-bar-wrap">
+              <div className={`activity-bar ${d.min >= goal ? 'met' : ''}`} style={{ height: `${(d.min / max) * 100}%` }}>
+                {d.screenMin > 0 && <div className="activity-screen" style={{ height: `${(d.screenMin / d.min) * 100}%` }} />}
+              </div>
+            </div>
+            <span>{d.label}</span>
           </div>
-          <span>{d.label}</span>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+      {anyScreen && <p className="activity-legend muted">Striped part of a bar: practice on the on-screen piano</p>}
+    </>
   );
 }
 
@@ -402,8 +411,17 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
           </select>
         </label>
         <label className="check">
-          <input type="checkbox" checked={progress.settings.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} /> Unlock
-          every lesson <span className="muted">(to skip ahead, or to try later units)</span>
+          <input type="checkbox" checked={progress.settings.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} /> Unlock every lesson{' '}
+          <span className="muted">(to skip ahead, or to try later units)</span>
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={progress.settings.onScreenPiano}
+            onChange={(e) => setSettings({ onScreenPiano: e.target.checked, input: e.target.checked ? progress.settings.input : 'piano' })}
+          />{' '}
+          Allow the on-screen piano{' '}
+          <span className="muted">(for practice away from the piano: half XP and no ⚡ bonus, so the real piano stays the best way to earn)</span>
         </label>
         {speechSupported && <VoiceCheck />}
         {speechSupported && (

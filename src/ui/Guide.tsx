@@ -5,6 +5,7 @@ import { MyDragon } from './MyDragon';
 import { ModeBanner, type Mode } from './ModeBanner';
 import { GrandStaff, Staff } from './Staff';
 import { Keyboard } from './Keyboard';
+import { PlayKeyboard } from './PlayKeyboard';
 import { SpeakButton } from './SpeakButton';
 import { quizWrongLine } from '../voice/lines';
 import { useProgress } from './store';
@@ -46,9 +47,10 @@ function PictureView({ picture, played = 0 }: { picture: Picture; played?: numbe
 }
 
 const letterOf = (midi: number) => midiName(midi).replace(/-?\d+$/, '').replace('#', '♯');
-const modeOf = (card: GuideCard): Mode => (card.kind === 'quiz' ? 'tap' : card.kind === 'play' ? 'play' : 'learn');
+const modeOf = (card: GuideCard, onScreen: boolean): Mode =>
+  card.kind === 'quiz' ? 'tap' : card.kind === 'play' ? (onScreen ? 'screen' : 'play') : 'learn';
 
-export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: boolean; go: (s: Screen) => void }) {
+export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId: string; mic: boolean; onScreen?: boolean; go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
   const { unit, lesson } = findLesson(lessonId);
   const guide = GUIDES[lesson.guide!];
@@ -73,7 +75,9 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
     const first = !progress.lessons[lessonId]?.completed;
     const outcome = {
       lessonId,
-      xp: first ? GUIDE_XP.first : GUIDE_XP.again,
+      // Half XP on the on-screen piano, as in lessons.
+      xp: Math.ceil((first ? GUIDE_XP.first : GUIDE_XP.again) / (onScreen ? 2 : 1)),
+      onScreen,
       chest: first ? rollChest({ perfect: false, commonStreak: progress.commonChests }) : null,
       ms: activeMs.current,
       accuracy: 1,
@@ -88,6 +92,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
       xp: outcome.xp,
       chest: outcome.chest,
       guide: true,
+      onScreen,
       accuracy: 1,
       fastestMs: null,
       bestCombo: 0,
@@ -113,6 +118,23 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
     shownAt.current = performance.now();
   };
 
+  // A note played on a play card, from the piano (via the microphone) or the on-screen keyboard.
+  const hear = (midi: number) => {
+    if (card.kind !== 'play' || done) return;
+    const target = toMidi(parseNote(card.play[played]));
+    if (midi === target) {
+      setHeard(null);
+      if (played + 1 >= card.play.length) {
+        setPlayed(card.play.length);
+        setDone(true);
+        sfx.correct();
+      } else setPlayed(played + 1);
+    } else {
+      setHeard(letterOf(midi));
+      setMisses((m) => m + 1);
+    }
+  };
+
   // Play cards listen for their notes in order. A right note counts as soon as it's heard; a wrong
   // one only once it's clearly a piano note (so talking doesn't count), as in lessons.
   useEffect(() => {
@@ -123,21 +145,11 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
         const target = toMidi(parseNote(card.play[played]));
         if (ev.midi !== target && ev.stage !== 'sure') return;
         handledOnset.current = ev.onsetT;
-        if (ev.midi === target) {
-          setHeard(null);
-          if (played + 1 >= card.play.length) {
-            setPlayed(card.play.length);
-            setDone(true);
-            sfx.correct();
-          } else setPlayed(played + 1);
-        } else {
-          setHeard(letterOf(ev.midi));
-          setMisses((m) => m + 1);
-        }
+        hear(ev.midi);
       },
       { sure: true },
     );
-  }, [mic, card, played, done]);
+  });
 
   const quit = () => {
     if (window.confirm('Stop this lesson?')) go({ name: 'home' });
@@ -146,7 +158,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
   const answered = card.kind === 'quiz' ? done : card.kind === 'play' ? done : true;
 
   return (
-    <div className="guide lesson" data-mode={modeOf(card)} style={{ ['--unit' as string]: unit.color }}>
+    <div className="guide lesson" data-mode={modeOf(card, onScreen)} style={{ ['--unit' as string]: unit.color }}>
       <header className="lesson-top">
         <button className="btn btn-quiet btn-icon" onClick={quit} aria-label="Quit lesson">
           ✕
@@ -157,7 +169,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
       </header>
 
       <main className="lesson-body guide-body">
-        <ModeBanner mode={modeOf(card)} text={card.kind === 'read' ? guide.title : undefined} />
+        <ModeBanner mode={modeOf(card, onScreen)} text={card.kind === 'read' ? guide.title : undefined} />
 
         <div className="guide-talk">
           <MyDragon mood={card.kind === 'quiz' && wrongTaps.length ? 'think' : done ? 'cheer' : 'happy'} size={88} />
@@ -223,9 +235,13 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
             )}
             {misses >= 2 && <p className="hint">Hint: it's {card.play[played].replace(/\d/, '')}</p>}
             <button className="btn btn-quiet" onClick={next}>
-              {mic ? 'Skip' : 'Next'}
+              {mic || onScreen ? 'Skip' : 'Next'}
             </button>
           </div>
+        )}
+
+        {card.kind === 'play' && onScreen && (
+          <PlayKeyboard clef={card.picture.clef === 'grand' ? 'treble' : card.picture.clef} disabled={done} onPress={hear} />
         )}
 
         {card.kind === 'read' && (

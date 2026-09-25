@@ -15,6 +15,8 @@ export interface ResultsData {
   chest: ChestRoll | null;
   // A mini-lesson: no accuracy or speed to show.
   guide?: boolean;
+  // Played on the on-screen piano (half XP, no lightning bonus).
+  onScreen?: boolean;
   accuracy: number;
   fastestMs: number | null;
   bestCombo: number;
@@ -61,6 +63,7 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
       <MyDragon mood="cheer" size={150} />
       <h1>{data.guide ? 'New skill learned!' : data.perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
       <p className="results-sub">{data.lessonTitle}</p>
+      {data.onScreen && <p className="results-screen">📱 On-screen piano: half XP. Play on a real piano for full XP and ⚡ bonuses!</p>}
 
       {data.guide ? (
         <div className="tiles">

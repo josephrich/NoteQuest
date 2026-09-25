@@ -4,6 +4,7 @@ import { Staff } from './Staff';
 import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
 import { Keyboard } from './Keyboard';
+import { PlayKeyboard } from './PlayKeyboard';
 import { SpeakButton } from './SpeakButton';
 import { PROMPTS } from '../voice/lines';
 import { spell } from '../engine/music';
@@ -30,10 +31,11 @@ function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boo
   return { title: lesson.title, color: unit.color, challenges: buildLesson(lesson, stats, { mic }) };
 }
 
-export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boolean; go: (s: Screen) => void }) {
+// `onScreen`: notes are played on the on-screen piano rather than heard through the microphone.
+export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId: string; mic: boolean; onScreen?: boolean; go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
-  const [setup] = useState(() => lessonSetup(lessonId, progress.items, mic));
-  const [run] = useState(() => new LessonRun(lessonId, setup.challenges, performance.now()));
+  const [setup] = useState(() => lessonSetup(lessonId, progress.items, mic || onScreen));
+  const [run] = useState(() => new LessonRun(lessonId, setup.challenges, performance.now(), Math.random, onScreen));
   const [, rerender] = useReducer((x: number) => x + 1, 0);
   const [message, setMessage] = useState<{ title: string; sub?: string } | null>(null);
   const [shake, setShake] = useState(0);
@@ -58,6 +60,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
       unitColor: setup.color,
       xp: outcome.xp,
       chest: outcome.chest,
+      onScreen,
       accuracy: outcome.accuracy,
       fastestMs: run.fastestMs,
       bestCombo: outcome.bestCombo,
@@ -130,7 +133,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   if (!c) return null;
   const expected = run.expected;
   const clef = itemClef(c.items[0]);
-  const mode = tapToAnswer ? 'tap' : c.kind === 'meet' ? 'learn' : 'play';
+  const mode = tapToAnswer ? 'tap' : c.kind === 'meet' ? 'learn' : onScreen ? 'screen' : 'play';
   const stepwise = c.items.length > 1 && !tapToAnswer;
   const colors = stepwise ? c.items.map((_, i) => (i < run.step ? (run.stepResults[i] ? COLORS.done : COLORS.missed) : i === run.step ? COLORS.current : undefined)) : undefined;
   const prompt =
@@ -249,6 +252,10 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
               </button>
             )}
           </div>
+        )}
+
+        {!tapToAnswer && onScreen && (
+          <PlayKeyboard clef={clef} disabled={run.phase !== 'asking'} onPress={(midi) => react(run.play(midi, performance.now()))} />
         )}
       </main>
 
