@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 .vercel
 dist/
+
+# Xcode package resolution (local to each Mac)
+ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

@@ -10,7 +10,8 @@ import { intervalLabel, itemClef, itemInterval, itemNote, type ItemId } from '..
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
-import { hasRecording, speechSupported } from './speech';
+import { hasRecording, lastVoiceUsed, speak, speechSupported, unlockSpeech } from './speech';
+import { GUIDES } from '../game/guides';
 import { PROMPTS } from '../voice/lines';
 import type { Screen } from './App';
 
@@ -264,6 +265,40 @@ function Prizes() {
   );
 }
 
+// Plays a line and reports which voice was used, so a problem with the recordings is easy to spot.
+function VoiceCheck() {
+  const [result, setResult] = useState<string | null>(null);
+  const line = GUIDES.staff.cards[0].text;
+  return (
+    <div className="row">
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => {
+          unlockSpeech();
+          setResult('Playing…');
+          speak(line);
+          window.setTimeout(() => {
+            const v = lastVoiceUsed();
+            setResult(
+              !v
+                ? 'Still loading…'
+                : v.source === 'recording'
+                  ? '✓ Using the recorded voice.'
+                  : v.source === 'device'
+                    ? `Using the iPad's own voice, because ${v.reason}.`
+                    : `No voice available (${v.reason}).`,
+            );
+          }, 1200);
+        }}
+      >
+        🔊 Voice check
+      </button>
+      {result && <span className="muted">{result}</span>}
+    </div>
+  );
+}
+
 // Everyone who plays on this device. Stats and settings below are for the selected player.
 function PlayersCard({ go }: { go: (s: Screen) => void }) {
   const { household, switchTo, addNew, remove } = useHousehold();
@@ -370,6 +405,7 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
           <input type="checkbox" checked={progress.settings.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} /> Unlock
           every lesson <span className="muted">(to skip ahead, or to try later units)</span>
         </label>
+        {speechSupported && <VoiceCheck />}
         {speechSupported && (
           <label className="check">
             <input type="checkbox" checked={progress.settings.readAloud} onChange={(e) => setSettings({ readAloud: e.target.checked })} /> Read aloud

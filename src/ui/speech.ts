@@ -35,7 +35,12 @@ let unlocked = false;
 // Each speak() gets a token, so a clip that finishes after being replaced doesn't end the new one.
 let token = 0;
 let source: AudioBufferSourceNode | null = null;
-const buffers = new Map<string, Promise<AudioBuffer>>();
+const buffers = new Map<string, Promise<{ buffer: AudioBuffer; gain: number }>>();
+
+// Which voice the last line used, and why the device voice if it fell back (for the voice check).
+export type VoiceUsed = { source: 'recording' } | { source: 'device'; reason: string } | { source: 'none'; reason: string };
+let lastVoice: VoiceUsed | null = null;
+export const lastVoiceUsed = () => lastVoice;
 
 // Listeners are told which text is being read (null when quiet), so the right button can light up.
 const subs = new Set<(text: string | null) => void>();
@@ -70,23 +75,35 @@ export function stopSpeaking(): void {
   notify(null);
 }
 
-function loadClip(ctx: AudioContext, id: string): Promise<AudioBuffer> {
+// Recordings come out quiet, so each is turned up to near full volume (by its own peak) as it plays.
+const TARGET_PEAK = 0.9;
+
+function loadClip(ctx: AudioContext, id: string): Promise<{ buffer: AudioBuffer; gain: number }> {
   let p = buffers.get(id);
   if (!p) {
     p = fetch(`./voice/${id}.mp3`)
       .then((r) => {
-        if (!r.ok) throw new Error(`clip ${id}: ${r.status}`);
+        if (!r.ok) throw new Error(`couldn't load the recording (${r.status})`);
         return r.arrayBuffer();
       })
-      .then((data) => ctx.decodeAudioData(data));
+      .then((data) => ctx.decodeAudioData(data))
+      .then((buffer) => {
+        let peak = 0;
+        for (let c = 0; c < buffer.numberOfChannels; c++) for (const v of buffer.getChannelData(c)) peak = Math.max(peak, Math.abs(v));
+        return { buffer, gain: peak > 0.01 ? Math.min(4, TARGET_PEAK / peak) : 1 };
+      });
     buffers.set(id, p);
     p.catch(() => buffers.delete(id));
   }
   return p;
 }
 
-function speakWithDevice(text: string, mine: number) {
-  if (!synth) return finish(mine);
+function speakWithDevice(text: string, mine: number, reason: string) {
+  if (!synth) {
+    lastVoice = { source: 'none', reason };
+    return finish(mine);
+  }
+  lastVoice = { source: 'device', reason };
   const u = new SpeechSynthesisUtterance(speakable(text));
   if (voice) u.voice = voice;
   u.lang = voice?.lang ?? 'en-AU';
@@ -109,20 +126,27 @@ export function speak(text: string): void {
   notify(text);
   const id = clipId(text);
   const ctx = audioContext();
-  if (!clips.has(id) || !ctx) return speakWithDevice(text, mine);
+  if (!clips.has(id)) return speakWithDevice(text, mine, 'this line has no recording');
+  if (!ctx) return speakWithDevice(text, mine, 'audio was not switched on by a tap yet');
   loadClip(ctx, id)
-    .then((buffer) => {
+    .then(async ({ buffer, gain }) => {
       if (mine !== token) return;
+      // iOS can pause audio when the microphone starts; wake it before playing.
+      if (ctx.state !== 'running') await ctx.resume();
+      if (mine !== token) return;
+      if (ctx.state !== 'running') throw new Error(`audio is ${ctx.state}`);
       const node = ctx.createBufferSource();
       node.buffer = buffer;
-      node.connect(ctx.destination);
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      node.connect(g).connect(ctx.destination);
       node.onended = () => finish(mine);
       source = node;
-      void ctx.resume();
+      lastVoice = { source: 'recording' };
       node.start();
     })
-    // A clip that can't be loaded or decoded falls back to the device's voice.
-    .catch(() => mine === token && speakWithDevice(text, mine));
+    // A clip that can't be loaded, decoded or played falls back to the device's voice.
+    .catch((e: unknown) => mine === token && speakWithDevice(text, mine, e instanceof Error ? e.message : String(e)));
 }
 
 // iOS only lets audio start from a tap the first time; call this from any tap to allow it later.
