@@ -1,6 +1,7 @@
 // The course: units of lessons, each introducing a few notes around "landmark" notes.
 // An item id is `<clef>:<note>`, e.g. "treble:G4", because the same pitch looks different in each clef.
 import { LETTERS, parseNote, toMidi, type Clef, type Note } from '../engine/music';
+import { GUIDES } from './guides';
 
 export type ItemId = string;
 
@@ -14,6 +15,8 @@ export interface LessonDef {
   checkpoint?: boolean;
   // Interval lessons: read the distance between notes rather than naming each one.
   intervals?: IntervalSpec;
+  // A mini-lesson that explains a concept (see guides.ts) instead of a practice lesson.
+  guide?: string;
 }
 
 export interface IntervalSpec {
@@ -114,17 +117,31 @@ function intervalLesson(id: string, title: string, sizes: number[], newSizes: nu
   return { id, title, pool: clefs.flatMap((c) => STAFF_NOTES[c]), newNotes: [], intervals: { sizes, newSizes, clefs } };
 }
 
+function guideLesson(guideId: string): LessonDef {
+  return { id: `guide-${guideId}`, title: GUIDES[guideId].title, pool: [], newNotes: [], guide: guideId };
+}
+
+// Puts each guide just before the lesson that needs it.
+function withGuides(lessons: LessonDef[], before: Record<string, string>): LessonDef[] {
+  return lessons.flatMap((l) => (before[l.id] ? [guideLesson(before[l.id]), l] : [l]));
+}
+
+export const isGuide = (lesson: LessonDef): boolean => lesson.guide !== undefined;
+
 export const UNITS: UnitDef[] = [
   {
     id: 'treble',
     title: 'Treble Landmarks',
     subtitle: 'Right-hand notes, found from Middle C, G and C',
     color: '#f5a524',
-    lessons: progressive(
-      'treble',
-      ['Middle C & the G line', 'Treble C', 'Next-door notes', 'Around the G line', 'Filling the gaps', 'Top of the staff'],
-      [t('C4', 'G4'), t('C5'), t('D4', 'B4', 'D5'), t('F4', 'A4'), t('E4', 'E5'), t('F5', 'G5')],
-      'Treble challenge',
+    lessons: withGuides(
+      progressive(
+        'treble',
+        ['Middle C & the G line', 'Treble C', 'Next-door notes', 'Around the G line', 'Filling the gaps', 'Top of the staff'],
+        [t('C4', 'G4'), t('C5'), t('D4', 'B4', 'D5'), t('F4', 'A4'), t('E4', 'E5'), t('F5', 'G5')],
+        'Treble challenge',
+      ),
+      { 'treble-1': 'staff', 'treble-3': 'steps', 'treble-5': 'face' },
     ),
   },
   {
@@ -132,11 +149,14 @@ export const UNITS: UnitDef[] = [
     title: 'Bass Landmarks',
     subtitle: 'Left-hand notes, found from Middle C, F and C',
     color: '#17c3b2',
-    lessons: progressive(
-      'bass',
-      ['Middle C & the F line', 'Bass C', 'Next-door notes', 'Around bass C', 'Filling the gaps', 'Bottom of the staff'],
-      [b('C4', 'F3'), b('C3'), b('B3', 'G3', 'E3'), b('D3', 'B2'), b('A3', 'A2'), b('G2', 'F2')],
-      'Bass challenge',
+    lessons: withGuides(
+      progressive(
+        'bass',
+        ['Middle C & the F line', 'Bass C', 'Next-door notes', 'Around bass C', 'Filling the gaps', 'Bottom of the staff'],
+        [b('C4', 'F3'), b('C3'), b('B3', 'G3', 'E3'), b('D3', 'B2'), b('A3', 'A2'), b('G2', 'F2')],
+        'Bass challenge',
+      ),
+      { 'bass-1': 'bass', 'bass-5': 'bass-spaces' },
     ),
   },
   {
@@ -145,6 +165,7 @@ export const UNITS: UnitDef[] = [
     subtitle: 'Switch between treble and bass without slowing down',
     color: '#7c5cff',
     lessons: [
+      guideLesson('grand'),
       { id: 'both-1', title: 'Landmark mix', pool: [...t('C4', 'G4', 'C5'), ...b('C4', 'F3', 'C3')], newNotes: [] },
       { id: 'both-2', title: 'Middle of the piano', pool: [...t('C4', 'D4', 'E4', 'F4', 'G4', 'A4')], newNotes: [] },
       { id: 'both-3', title: 'Middle, both clefs', pool: [...t('C4', 'D4', 'E4', 'F4', 'G4'), ...b('C4', 'B3', 'A3', 'G3', 'F3')], newNotes: [] },
@@ -163,19 +184,22 @@ export const UNITS: UnitDef[] = [
     title: 'Ledger Lines',
     subtitle: 'Notes above and below the staff',
     color: '#ff5d8f',
-    lessons: progressive(
-      'ledger',
-      ['High treble', 'Low treble', 'High bass', 'Low bass'],
-      [t('A5', 'B5', 'C6'), t('A3', 'B3'), b('D4', 'E4'), b('E2', 'D2')],
-      'Ledger line challenge',
-    ),
+    lessons: [
+      guideLesson('ledger'),
+      ...progressive(
+        'ledger',
+        ['High treble', 'Low treble', 'High bass', 'Low bass'],
+        [t('A5', 'B5', 'C6'), t('A3', 'B3'), b('D4', 'E4'), b('E2', 'D2')],
+        'Ledger line challenge',
+      ),
+    ],
   },
   {
     id: 'intervals',
     title: 'Steps, Skips & Leaps',
     subtitle: 'Read the jump from one note to the next',
     color: '#3d8bff',
-    lessons: [
+    lessons: withGuides([
       intervalLesson('intervals-1', 'Steps', [1, 2], [1, 2], ['treble']),
       intervalLesson('intervals-2', 'Skips', [2, 3], [3], ['treble']),
       intervalLesson('intervals-3', 'Steps & skips in bass', [2, 3], [], ['bass']),
@@ -183,7 +207,7 @@ export const UNITS: UnitDef[] = [
       intervalLesson('intervals-5', 'Leaps in bass', [3, 4, 5], [], ['bass']),
       intervalLesson('intervals-6', 'Octave jumps', [3, 5, 8], [8], ['treble', 'bass']),
       { ...intervalLesson('intervals-check', 'Shape challenge', [2, 3, 4, 5, 8], [], ['treble', 'bass']), checkpoint: true },
-    ],
+    ], { 'intervals-1': 'intervals', 'intervals-2': 'skips', 'intervals-4': 'leaps', 'intervals-6': 'octaves' }),
   },
   { id: 'triads', title: 'Chords', subtitle: 'Play three notes at once', color: '#8a8aa3', lessons: [], comingSoon: true },
 ];

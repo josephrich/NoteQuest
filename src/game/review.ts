@@ -2,7 +2,7 @@
 // leaning on the notes he reads slowest or misses most. This is what keeps the app useful after
 // the course runs out.
 import { REVIEW_ID, isNoteItem, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
-import { buildLesson, nameOptions, needWeight, type Challenge, type ItemStat } from './lesson';
+import { buildLesson, nameOptions, needWeight, tapped, type Challenge, type ItemStat } from './lesson';
 import { dayKey, type Progress } from './progress';
 
 export { REVIEW_ID };
@@ -62,8 +62,13 @@ export function buildReview(stats: Record<ItemId, ItemStat>, { mic, rnd = Math.r
       focusChallenges.push(play ? { kind: 'play', items: [id] } : { kind: 'name', items: [id], options: nameOptions(id, rnd) });
     }
   }
+  // Slot each one in next to a challenge of the same kind (tap or play), so the review keeps its
+  // blocks instead of switching modes more often.
   const out = [...base];
-  const gap = Math.max(1, Math.floor(out.length / focusChallenges.length));
-  focusChallenges.forEach((c, i) => out.splice(Math.min(out.length, 1 + i * (gap + 1)), 0, c));
+  focusChallenges.forEach((c, i) => {
+    const same = out.map((o, j) => (tapped(o) === tapped(c) ? j : -1)).filter((j) => j >= 0);
+    const at = same.length ? same[Math.floor(((i % FOCUS_COUNT) + 0.5) * (same.length / FOCUS_COUNT)) % same.length] + 1 : out.length;
+    out.splice(at, 0, c);
+  });
   return out;
 }

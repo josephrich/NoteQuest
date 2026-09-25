@@ -66,7 +66,7 @@ describe('daily review', () => {
     expect(reviewDoneToday(r.progress, new Date('2026-09-25T17:00:00'))).toBe(false);
     expect(r.progress.review.total).toBe(1);
     expect(r.progress.lessons[REVIEW_ID]).toBeUndefined();
-    expect(nextLessonId(r.progress)).toBe('treble-1');
+    expect(nextLessonId(r.progress)).toBe('guide-staff');
     // Review time still counts towards the daily goal, and the practice updates note stats.
     expect(r.progress.days['2026-09-24'].ms).toBe(240_000);
     expect(r.progress.items['bass:F3'].seen).toBe(4);

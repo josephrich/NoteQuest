@@ -8,7 +8,7 @@ import { seededRandom } from '../engine/test-synth';
 
 const pos = (id: string) => itemNote(id).octave * 7 + itemNote(id).letter;
 const span = (a: string, b: string) => Math.abs(pos(a) - pos(b)) + 1;
-const intervalLessons = UNITS.find((u) => u.id === 'intervals')!.lessons;
+const intervalLessons = UNITS.find((u) => u.id === 'intervals')!.lessons.filter((l) => l.intervals);
 
 describe('interval content', () => {
   test('shiftItem moves by letter names across octaves', () => {

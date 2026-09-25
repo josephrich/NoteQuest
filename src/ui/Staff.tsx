@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { renderStaff, type StaffSpec } from '../engine/staff';
+import { renderGrandStaff, renderStaff, type GrandSpec, type StaffSpec } from '../engine/staff';
 
 export function Staff(spec: StaffSpec) {
   const ref = useRef<HTMLDivElement>(null);
@@ -7,6 +7,15 @@ export function Staff(spec: StaffSpec) {
   useLayoutEffect(() => {
     if (ref.current) renderStaff(ref.current, spec);
     // Re-render only when the spec's content changes.
+  }, [key]);
+  return <div className="staff" ref={ref} />;
+}
+
+export function GrandStaff(spec: GrandSpec) {
+  const ref = useRef<HTMLDivElement>(null);
+  const key = JSON.stringify(spec);
+  useLayoutEffect(() => {
+    if (ref.current) renderGrandStaff(ref.current, spec);
   }, [key]);
   return <div className="staff" ref={ref} />;
 }

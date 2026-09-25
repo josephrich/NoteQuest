@@ -12,7 +12,9 @@ export interface ResultsData {
   lessonTitle: string;
   unitColor: string;
   xp: number;
-  chest: ChestRoll;
+  chest: ChestRoll | null;
+  // A mini-lesson: no accuracy or speed to show.
+  guide?: boolean;
   accuracy: number;
   fastestMs: number | null;
   bestCombo: number;
@@ -57,29 +59,44 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
       <Confetti />
       {bigWin && <Confetti key="big" />}
       <MyDragon mood="cheer" size={150} />
-      <h1>{data.perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
+      <h1>{data.guide ? 'New skill learned!' : data.perfect ? 'Perfect lesson!' : 'Lesson complete!'}</h1>
       <p className="results-sub">{data.lessonTitle}</p>
 
-      <div className="tiles">
-        <div className="tile tile-xp">
-          <span>Total XP</span>
-          <strong>+{data.xp}</strong>
+      {data.guide ? (
+        <div className="tiles">
+          <div className="tile tile-xp">
+            <span>Total XP</span>
+            <strong>+{data.xp}</strong>
+          </div>
+          <div className="tile tile-acc">
+            <span>Learned</span>
+            <strong>📖 ✓</strong>
+          </div>
         </div>
-        <div className="tile tile-acc">
-          <span>Accuracy</span>
-          <strong>{Math.round(data.accuracy * 100)}%</strong>
+      ) : (
+        <div className="tiles">
+          <div className="tile tile-xp">
+            <span>Total XP</span>
+            <strong>+{data.xp}</strong>
+          </div>
+          <div className="tile tile-acc">
+            <span>Accuracy</span>
+            <strong>{Math.round(data.accuracy * 100)}%</strong>
+          </div>
+          <div className="tile tile-speed">
+            <span>Fastest read</span>
+            <strong>{data.fastestMs !== null ? `${(data.fastestMs / 1000).toFixed(1)}s` : '–'}</strong>
+          </div>
+          <div className="tile tile-combo">
+            <span>Best combo</span>
+            <strong>🔥 {data.bestCombo}</strong>
+          </div>
         </div>
-        <div className="tile tile-speed">
-          <span>Fastest read</span>
-          <strong>{data.fastestMs !== null ? `${(data.fastestMs / 1000).toFixed(1)}s` : '–'}</strong>
-        </div>
-        <div className="tile tile-combo">
-          <span>Best combo</span>
-          <strong>🔥 {data.bestCombo}</strong>
-        </div>
-      </div>
+      )}
 
-      <Chest roll={data.chest} totalAfter={progress.gems} onOpened={() => setBigWin(data.chest.rarity === 'epic' || data.chest.rarity === 'legendary')} />
+      {data.chest && (
+        <Chest roll={data.chest} totalAfter={progress.gems} onOpened={() => setBigWin(data.chest?.rarity === 'epic' || data.chest?.rarity === 'legendary')} />
+      )}
 
       {data.streakExtended ? (
         <div className="streak-card">

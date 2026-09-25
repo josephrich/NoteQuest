@@ -1,5 +1,5 @@
 // Everything Clefwing remembers, stored only on this device. Pure functions so they can be tested.
-import { LESSON_ORDER, REVIEW_ID, type ItemId } from './content';
+import { LESSON_ORDER, REVIEW_ID, findLesson, isGuide, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
 import type { ChestRoll } from './rewards';
 import { initialShop, type Claim, type Prize, type ShopState } from './shop';
@@ -86,7 +86,8 @@ export function currentStreak(p: Progress, now: Date): number {
 export interface LessonOutcome {
   lessonId: string;
   xp: number;
-  chest: ChestRoll;
+  // No chest for re-reading a guide.
+  chest: ChestRoll | null;
   ms: number;
   accuracy: number;
   answers: { id: ItemId; correct: boolean; ms: number | null }[];
@@ -131,14 +132,14 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
     streak = { count, lastDay: key, freezes, best: Math.max(streak.best, count) };
     streakExtended = true;
   }
-  if (outcome.chest.freeze && streak.freezes < 2) streak = { ...streak, freezes: streak.freezes + 1 };
+  if (outcome.chest?.freeze && streak.freezes < 2) streak = { ...streak, freezes: streak.freezes + 1 };
 
   return {
     progress: {
       ...p,
       xp: p.xp + outcome.xp,
-      gems: p.gems + outcome.chest.gems,
-      commonChests: outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
+      gems: p.gems + (outcome.chest?.gems ?? 0),
+      commonChests: !outcome.chest ? p.commonChests : outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
       days: { ...p.days, [key]: day },
       streak,
       // Reviews aren't course lessons, so they don't count towards unlocking the path.
@@ -156,16 +157,27 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
   };
 }
 
-// The first lesson not yet completed; everything before it is unlocked.
-export function nextLessonId(p: Progress): string | null {
-  return LESSON_ORDER.find((id) => !p.lessons[id]?.completed) ?? null;
+const guideIds = new Set(LESSON_ORDER.filter((id) => isGuide(findLesson(id).lesson)));
+
+// The first practice lesson not yet completed. Guides (mini-lessons) never hold up the path, so a
+// guide added later doesn't lock lessons he has already reached.
+function frontier(p: Progress): number {
+  const i = LESSON_ORDER.findIndex((id) => !guideIds.has(id) && !p.lessons[id]?.completed);
+  return i < 0 ? LESSON_ORDER.length : i;
 }
 
+// Where to start next: the frontier lesson, or the unread guides just before it.
+export function nextLessonId(p: Progress): string | null {
+  let i = frontier(p);
+  if (i >= LESSON_ORDER.length) return null;
+  while (i > 0 && guideIds.has(LESSON_ORDER[i - 1]) && !p.lessons[LESSON_ORDER[i - 1]]?.completed) i--;
+  return LESSON_ORDER[i];
+}
+
+// Everything up to the frontier is open, including the guides before it.
 export function isUnlocked(p: Progress, lessonId: string): boolean {
   if (p.settings.unlockAll) return true;
-  const next = nextLessonId(p);
-  if (next === null) return true;
-  return LESSON_ORDER.indexOf(lessonId) <= LESSON_ORDER.indexOf(next);
+  return LESSON_ORDER.indexOf(lessonId) <= frontier(p);
 }
 
 const STORAGE_KEY = 'nq.progress.v1';

@@ -3,6 +3,8 @@ import { useProgress } from './store';
 import { Welcome } from './Welcome';
 import { Home } from './Home';
 import { LessonScreen } from './Lesson';
+import { GuideScreen } from './Guide';
+import { REVIEW_ID, findLesson } from '../game/content';
 import { Results, type ResultsData } from './Results';
 import { Parent } from './Parent';
 import { Shop } from './Shop';
@@ -33,6 +35,8 @@ export function App() {
     case 'home':
       return <Home go={setScreen} />;
     case 'lesson':
+      if (screen.lessonId !== REVIEW_ID && findLesson(screen.lessonId).lesson.guide)
+        return <GuideScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} go={setScreen} />;
       return <LessonScreen key={screen.run} lessonId={screen.lessonId} mic={screen.mic} go={setScreen} />;
     case 'results':
       return <Results data={screen.data} go={setScreen} />;

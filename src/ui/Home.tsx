@@ -5,6 +5,7 @@ import { useProgress } from './store';
 import { greeting } from './lines';
 import { UNITS, type LessonDef, type UnitDef } from '../game/content';
 import { describeNew } from '../game/lesson';
+import { GUIDES } from '../game/guides';
 import { currentStreak, goalMs, isUnlocked, nextLessonId, today } from '../game/progress';
 import { listener } from '../engine/listener';
 import { unlockSound } from './sound';
@@ -140,13 +141,13 @@ export function Home({ go }: { go: (s: Screen) => void }) {
                   <li key={lesson.id} style={{ transform: `translateX(${WIGGLE[i % WIGGLE.length]}px)` }}>
                     {current && <span className="start-tag">START</span>}
                     <button
-                      className={`node node-${state} ${lesson.checkpoint ? 'node-check' : ''}`}
+                      className={`node node-${state} ${lesson.checkpoint ? 'node-check' : ''} ${lesson.guide ? 'node-guide' : ''}`}
                       style={{ ['--unit' as string]: unit.color }}
                       disabled={!unlocked}
                       aria-label={`${lesson.title}${record?.completed ? ', completed' : unlocked ? '' : ', locked'}`}
                       onClick={() => setSelected({ unit, lesson })}
                     >
-                      {lesson.checkpoint ? '🏆' : state === 'locked' ? '🔒' : record?.bestAccuracy === 1 ? '⭐' : record?.completed ? '✓' : '♪'}
+                      {lesson.guide ? (record?.completed ? '✓' : '📖') : lesson.checkpoint ? '🏆' : state === 'locked' ? '🔒' : record?.bestAccuracy === 1 ? '⭐' : record?.completed ? '✓' : '♪'}
                     </button>
                   </li>
                 );
@@ -162,7 +163,9 @@ export function Home({ go }: { go: (s: Screen) => void }) {
             <div className="sheet-unit">{selected.unit.title}</div>
             <h2>{selected.lesson.title}</h2>
             <p className="sheet-notes">
-              {describeNew(selected.lesson).length
+              {selected.lesson.guide
+                ? `A quick mini-lesson: ${GUIDES[selected.lesson.guide].cards.length} short cards`
+                : describeNew(selected.lesson).length
                 ? `New ${selected.lesson.intervals ? 'jumps' : 'notes'}: ${describeNew(selected.lesson).join(', ')}`
                 : selected.lesson.checkpoint
                   ? 'Show what you know. Every note so far!'
@@ -171,7 +174,13 @@ export function Home({ go }: { go: (s: Screen) => void }) {
                     : 'Practise the notes you know'}
             </p>
             <button className="btn btn-primary btn-big" disabled={starting} onClick={() => start(selected.lesson.id)}>
-              {starting ? 'Getting ready…' : progress.lessons[selected.lesson.id]?.completed ? 'Practise again' : 'Start'}
+              {starting
+                ? 'Getting ready…'
+                : progress.lessons[selected.lesson.id]?.completed
+                  ? selected.lesson.guide
+                    ? 'Read again'
+                    : 'Practise again'
+                  : 'Start'}
             </button>
           </div>
         </div>

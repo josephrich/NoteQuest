@@ -22,6 +22,15 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   skips (line to line), 4ths, 5ths and octaves, in both clefs. He names the jump between two notes,
   plays a pair when told only the first note, and plays short four-note melodies built from the
   jumps he knows.
+- **Mini-lessons** (📖 on the path): 11 short explainers placed just before the lessons that need
+  them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
+  spaces, the grand staff, ledger lines, and steps, skips, leaps and octaves. Each has a few cards
+  with pictures on the staff, quick tap questions and "now play it" moments. Wrong answers just
+  explain and let him retry. The first read earns a chest; re-reading earns a little XP. Guides
+  never lock the path, so lessons he's already reached stay open.
+- **Clear modes**: tapping (orange, 👆), playing (blue, 🎹) and learning (purple, 📖) each have
+  their own banner and background tint. The banner pops and chimes when the mode changes, and
+  questions come in blocks so the mode changes less often.
 - **Challenge types**:
   - *Meet the note*: a tip explaining where the note sits
   - *What note is this?*: tap the letter

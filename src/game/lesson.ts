@@ -18,6 +18,9 @@ export interface Challenge {
   startHint?: boolean;
 }
 
+// Whether a challenge is answered by tapping or by playing.
+export const tapped = (c: Challenge): boolean => c.kind === 'name' || c.kind === 'interval';
+
 // The right answer to tap, for 'name' and 'interval' challenges.
 export function challengeAnswer(c: Challenge): string {
   return c.kind === 'interval' ? intervalLabel(c.interval!) : itemLetter(c.items[0]);
@@ -80,8 +83,10 @@ export function nameOptions(id: ItemId, rnd: Rnd): string[] {
   return [answer, ...others.slice(0, 3)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 }
 
-const PATTERN: ChallengeKind[] = ['name', 'play', 'play', 'name', 'play', 'burst'];
-const CHECKPOINT_PATTERN: ChallengeKind[] = ['play', 'play', 'burst', 'name', 'play', 'burst'];
+// Tapping and playing come in blocks rather than alternating, so he isn't switching modes every
+// question.
+const PATTERN: ChallengeKind[] = ['name', 'name', 'play', 'play', 'play', 'burst'];
+const CHECKPOINT_PATTERN: ChallengeKind[] = ['name', 'name', 'play', 'play', 'burst', 'burst'];
 
 export function buildLesson(
   lesson: LessonDef,
@@ -122,7 +127,7 @@ export function buildLesson(
   return out;
 }
 
-const INTERVAL_PATTERN = ['interval', 'pair', 'melody', 'interval', 'pair', 'melody'] as const;
+const INTERVAL_PATTERN = ['interval', 'interval', 'interval', 'pair', 'pair', 'melody'] as const;
 const MELODY_LENGTH = 4;
 
 // A note `size` apart from `from`, up or down, that stays on the staff; null if neither fits.

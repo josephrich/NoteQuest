@@ -212,14 +212,28 @@ describe('progress and streaks', () => {
     expect(p.streak.freezes).toBe(1);
   });
 
-  test('lessons unlock in order', () => {
+  test('lessons unlock in order, starting with the first guide', () => {
     let p = initialProgress();
-    expect(nextLessonId(p)).toBe('treble-1');
+    expect(nextLessonId(p)).toBe('guide-staff');
+    expect(isUnlocked(p, 'treble-1')).toBe(true);
     expect(isUnlocked(p, 'treble-2')).toBe(false);
     p = finishLesson(p, outcome(1000), at('2026-09-24')).progress;
     expect(nextLessonId(p)).toBe('treble-2');
     expect(isUnlocked(p, 'treble-2')).toBe(true);
     expect(isUnlocked(p, 'treble-1')).toBe(true);
+  });
+
+  test('guides never lock lessons he has already reached', () => {
+    // Progress from before guides existed: up to treble-4 done.
+    let p = initialProgress();
+    for (const id of ['treble-1', 'treble-2', 'treble-3', 'treble-4']) p = finishLesson(p, { ...outcome(1000), lessonId: id }, at('2026-09-24')).progress;
+    expect(isUnlocked(p, 'treble-5')).toBe(true);
+    expect(isUnlocked(p, 'treble-6')).toBe(false);
+    // The guide just before his next lesson is suggested first; the ones he skipped past stay open.
+    expect(nextLessonId(p)).toBe('guide-face');
+    expect(isUnlocked(p, 'guide-steps')).toBe(true);
+    p = finishLesson(p, { ...outcome(1000), lessonId: 'guide-face' }, at('2026-09-24')).progress;
+    expect(nextLessonId(p)).toBe('treble-5');
   });
 
   test('day keys use the local calendar', () => {

@@ -2,11 +2,12 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { Staff } from './Staff';
 import { MyDragon } from './MyDragon';
+import { ModeBanner } from './ModeBanner';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
 import { INTERVAL_TIPS, findLesson, intervalLabel, intervalWord, itemClef, itemLetter, itemMidi, itemNote, noteTip } from '../game/content';
-import { buildLesson, challengeAnswer, type Challenge, type ItemStat } from '../game/lesson';
+import { buildLesson, challengeAnswer, tapped as isTapChallenge, type Challenge, type ItemStat } from '../game/lesson';
 import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview } from '../game/review';
 import { LessonRun, type Feedback } from '../game/run';
 import { finishLesson } from '../game/progress';
@@ -40,7 +41,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const advanceTimer = useRef<number | undefined>(undefined);
 
   const c = run.current;
-  const tapToAnswer = c && (c.kind === 'name' || c.kind === 'interval');
+  const tapToAnswer = c && isTapChallenge(c);
   const listening = mic && run.phase === 'asking' && c && !tapToAnswer;
 
   const finish = () => {
@@ -125,6 +126,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   if (!c) return null;
   const expected = run.expected;
   const clef = itemClef(c.items[0]);
+  const mode = tapToAnswer ? 'tap' : c.kind === 'meet' ? 'learn' : 'play';
   const stepwise = c.items.length > 1 && !tapToAnswer;
   const colors = stepwise ? c.items.map((_, i) => (i < run.step ? (run.stepResults[i] ? COLORS.done : COLORS.missed) : i === run.step ? COLORS.current : undefined)) : undefined;
   const prompt =
@@ -147,7 +149,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const fullAnswer = tapToAnswer ? challengeAnswer(c) : answer;
 
   return (
-    <div className="lesson" style={{ ['--unit' as string]: setup.color }}>
+    <div className="lesson" data-mode={mode} style={{ ['--unit' as string]: setup.color }}>
       <header className="lesson-top">
         <button className="btn btn-quiet btn-icon" onClick={quit} aria-label="Quit lesson">
           ✕
@@ -161,6 +163,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
       </header>
 
       <main className="lesson-body">
+        <ModeBanner mode={mode} text={mode === 'learn' ? (c.interval ? 'New jump' : 'New note') : undefined} />
         <h1 className="prompt">{prompt}</h1>
 
         <div key={shake} className={`staff-card ${wrong && run.phase === 'asking' ? 'shake' : ''}`} data-expected={itemMidi(expected)}>

@@ -57,6 +57,11 @@ export const sfx = {
   tick(i: number) {
     blip(2700 + i * 60, 0, 0.04, 0.035, 'square');
   },
+  // The lesson changed between tapping and playing.
+  modeSwitch() {
+    blip(C8, 0, 0.06, 0.04, 'sine');
+    blip(G7, 0.07, 0.1, 0.04, 'sine');
+  },
   // Gem counter ticking up.
   count() {
     blip(C8, 0, 0.03, 0.025);
