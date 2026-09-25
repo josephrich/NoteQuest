@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { speakable } from './speech';
+import { speakable } from '../voice/speakable';
 
 test('note letters are spoken as letter names, but "A" as a word is left alone', () => {
   expect(speakable('One step up from G is A.')).toBe('One step up from gee is ay.');

@@ -5,6 +5,7 @@ import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
 import { Keyboard } from './Keyboard';
 import { SpeakButton } from './SpeakButton';
+import { PROMPTS } from '../voice/lines';
 import { spell } from '../engine/music';
 import { useProgress } from './store';
 import { sfx } from './sound';
@@ -135,17 +136,17 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
   const prompt =
     c.kind === 'meet'
       ? c.interval
-        ? 'New jump!'
-        : 'New note!'
+        ? PROMPTS.meetJump
+        : PROMPTS.meetNote
       : c.kind === 'name'
-        ? 'What note is this?'
+        ? PROMPTS.name
         : c.kind === 'interval'
-          ? 'How far apart are they?'
+          ? PROMPTS.interval
           : c.startHint
-            ? 'Play both notes'
+            ? PROMPTS.pair
             : c.kind === 'burst'
-              ? 'Play these notes in order'
-              : 'Play this note';
+              ? PROMPTS.burst
+              : PROMPTS.play;
   const wrong = run.feedback && !run.feedback.correct ? run.feedback : null;
   const tip = c.kind === 'meet' ? (c.interval ? INTERVAL_TIPS[c.interval] : noteTip(c.items[0])) : '';
   // The note to play right now (for hints), and the full answer for tap challenges and reveals.

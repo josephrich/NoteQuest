@@ -10,7 +10,8 @@ import { intervalLabel, itemClef, itemInterval, itemNote, type ItemId } from '..
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
-import { speechSupported } from './speech';
+import { hasRecording, speechSupported } from './speech';
+import { PROMPTS } from '../voice/lines';
 import type { Screen } from './App';
 
 function Gate({ onPass, onCancel }: { onPass: () => void; onCancel: () => void }) {
@@ -419,6 +420,9 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <p>
           <a href="./privacy.html">Privacy policy</a>: Clefwing collects no personal information, and the microphone is only used to hear notes, never recorded.
         </p>
+        {hasRecording(PROMPTS.play) && (
+          <p className="muted">The read-aloud voice is AI-generated, recorded with OpenAI text-to-speech and built into the app.</p>
+        )}
         <p className="muted">Progress is saved in Safari on this iPad only. Clearing Safari website data will erase it.</p>
         <button
           className="btn btn-danger"

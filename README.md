@@ -36,7 +36,9 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
 - **Show more, say less, and read aloud**: explainer and new-note cards show the matching keys lit
   up on a small piano keyboard under the staff (middle C always has a dot), and every card is one
   short sentence. A 🔊 button reads explanations and prompts aloud with the device's built-in voice.
-  Grown-ups can switch on **Read aloud automatically** for younger players. Note listening pauses
+  Grown-ups can switch on **Read aloud automatically** for younger players. Lines play natural
+  recordings made with OpenAI text-to-speech where they exist (see *Voice recordings* below), and
+  the device's voice otherwise. Note listening pauses
   while the voice talks, and note letters are pronounced as letters ("A" as "ay").
 - **Clear modes**: tapping (orange, 👆), playing (blue, 🎹) and learning (purple, 📖) each have
   their own banner and background tint. The banner pops and chimes when the mode changes, and
@@ -107,6 +109,22 @@ use the deployed site or an https tunnel.
 
 Field test on an iPad and an acoustic piano: 0 misjudged notes out of 41 and 0 misjudged chords out
 of 34. Median detection time was 67 ms for notes and 117 ms for chords.
+
+## Voice recordings
+
+Every line the app reads aloud is listed in `src/voice/lines.ts`. To record them with OpenAI's
+text-to-speech (about 130 short lines, costing a few cents):
+
+```bash
+npm run voices                  # records new or changed lines; asks for your OpenAI API key (hidden)
+npm run voices -- --force       # re-record everything, e.g. with VOICE=nova npm run voices -- --force
+npm run voices -- --dry-run     # list what would be recorded
+```
+
+Recordings go in `public/voice/` and are listed in `src/voice/clips.json`; commit both. Editing a line
+changes its recording's name, so the next run re-records just that line and removes the old one. A
+line with no recording falls back to the device's voice. OpenAI's terms require telling users that
+the voice is AI-generated (see `docs/APP_STORE.md`).
 
 ## Logo and icons
 

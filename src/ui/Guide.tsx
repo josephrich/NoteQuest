@@ -6,6 +6,7 @@ import { ModeBanner, type Mode } from './ModeBanner';
 import { GrandStaff, Staff } from './Staff';
 import { Keyboard } from './Keyboard';
 import { SpeakButton } from './SpeakButton';
+import { quizWrongLine } from '../voice/lines';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise } from './lines';
@@ -201,7 +202,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
         )}
         {card.kind === 'quiz' && wrongTaps.length > 0 && !done && (
           <p className="try-again" role="status">
-            Not quite. {card.why} Try again! <SpeakButton text={`Not quite. ${card.why} Try again!`} auto={progress.settings.readAloud} />
+            Not quite. {card.why} Try again! <SpeakButton text={quizWrongLine(card.why)} auto={progress.settings.readAloud} />
           </p>
         )}
 
@@ -240,7 +241,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
             <div className="fb-title">{cheer}</div>
             {card.kind === 'quiz' && (
               <div className="fb-sub">
-                {card.why} <SpeakButton text={`${cheer} ${card.why}`} auto={progress.settings.readAloud} />
+                {card.why} <SpeakButton text={card.why} auto={progress.settings.readAloud} />
               </div>
             )}
           </div>

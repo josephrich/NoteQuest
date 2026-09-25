@@ -1,11 +1,18 @@
-// Reading text aloud with the device's built-in voices (the same ones as Siri / Spoken Content), for
-// players who are still learning to read. Nothing is recorded or sent anywhere.
+// Reading text aloud, for players who are still learning to read. Lines that have a recording
+// (made with scripts/voices.mjs and shipped inside the app in public/voice/) play that; anything
+// else uses the device's built-in voice. Nothing is recorded or sent anywhere.
 // While the voice is talking, the note listener is paused so the voice can't be heard as a note.
 import { listener } from '../engine/listener';
+import { audioContext, unlockSound } from './sound';
+import { clipId, speakable } from '../voice/speakable';
+import recorded from '../voice/clips.json';
+
+export { speakable };
 
 const synth: SpeechSynthesis | null = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
+const clips = new Set<string>(recorded as string[]);
 
-export const speechSupported = synth !== null;
+export const speechSupported = synth !== null || clips.size > 0;
 
 let voice: SpeechSynthesisVoice | null = null;
 
@@ -23,27 +30,13 @@ if (synth) {
   synth.addEventListener?.('voiceschanged', () => (voice = pickVoice()));
 }
 
-const LETTER_SOUNDS: Record<string, string> = { A: 'ay', B: 'bee', C: 'see', D: 'dee', E: 'ee', F: 'eff', G: 'gee' };
-
-// Written text as it should be spoken: note letters as letter names (so "is A" isn't read as "is uh"),
-// sharps as "sharp", and the odd symbol dropped.
-export function speakable(text: string): string {
-  return (
-    text
-      .replace(/([A-G])♯/g, '$1 sharp')
-      // A lone capital B-G is a note name. So is A, except as the word "a" ("A step", "A 4th").
-      .replace(/\b([B-G])\b/g, (_, l: string) => LETTER_SOUNDS[l])
-      .replace(/\bA\b(?!\s+[a-z0-9])/g, LETTER_SOUNDS.A)
-      .replace(/[·•]/g, ',')
-      .replace(/[^\p{L}\p{N}\s.,!?'’:;-]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
-}
-
-let current: SpeechSynthesisUtterance | null = null;
 let currentText: string | null = null;
 let unlocked = false;
+// Each speak() gets a token, so a clip that finishes after being replaced doesn't end the new one.
+let token = 0;
+let source: AudioBufferSourceNode | null = null;
+const buffers = new Map<string, Promise<AudioBuffer>>();
+
 // Listeners are told which text is being read (null when quiet), so the right button can light up.
 const subs = new Set<(text: string | null) => void>();
 const notify = (text: string | null) => {
@@ -58,37 +51,83 @@ export function onSpeaking(fn: (text: string | null) => void): () => void {
   return () => subs.delete(fn);
 }
 
+export const hasRecording = (text: string) => clips.has(clipId(text));
+
+function silence() {
+  try {
+    source?.stop();
+  } catch {
+    /* already stopped */
+  }
+  source = null;
+  synth?.cancel();
+}
+
 export function stopSpeaking(): void {
-  if (!synth) return;
-  current = null;
-  synth.cancel();
+  token++;
+  silence();
+  listener.release();
+  notify(null);
+}
+
+function loadClip(ctx: AudioContext, id: string): Promise<AudioBuffer> {
+  let p = buffers.get(id);
+  if (!p) {
+    p = fetch(`./voice/${id}.mp3`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`clip ${id}: ${r.status}`);
+        return r.arrayBuffer();
+      })
+      .then((data) => ctx.decodeAudioData(data));
+    buffers.set(id, p);
+    p.catch(() => buffers.delete(id));
+  }
+  return p;
+}
+
+function speakWithDevice(text: string, mine: number) {
+  if (!synth) return finish(mine);
+  const u = new SpeechSynthesisUtterance(speakable(text));
+  if (voice) u.voice = voice;
+  u.lang = voice?.lang ?? 'en-AU';
+  u.rate = 0.92;
+  u.onend = u.onerror = () => finish(mine);
+  synth.speak(u);
+}
+
+function finish(mine: number) {
+  if (mine !== token) return;
+  source = null;
   listener.release();
   notify(null);
 }
 
 export function speak(text: string): void {
-  if (!synth) return;
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(speakable(text));
-  if (voice) u.voice = voice;
-  u.lang = voice?.lang ?? 'en-AU';
-  u.rate = 0.92;
-  const done = () => {
-    if (current !== u) return;
-    current = null;
-    listener.release();
-    notify(null);
-  };
-  u.onend = done;
-  u.onerror = done;
-  current = u;
+  const mine = ++token;
+  silence();
   listener.hold();
   notify(text);
-  synth.speak(u);
+  const id = clipId(text);
+  const ctx = audioContext();
+  if (!clips.has(id) || !ctx) return speakWithDevice(text, mine);
+  loadClip(ctx, id)
+    .then((buffer) => {
+      if (mine !== token) return;
+      const node = ctx.createBufferSource();
+      node.buffer = buffer;
+      node.connect(ctx.destination);
+      node.onended = () => finish(mine);
+      source = node;
+      void ctx.resume();
+      node.start();
+    })
+    // A clip that can't be loaded or decoded falls back to the device's voice.
+    .catch(() => mine === token && speakWithDevice(text, mine));
 }
 
-// iOS only lets speech start from a tap the first time; call this from any tap to allow it later.
+// iOS only lets audio start from a tap the first time; call this from any tap to allow it later.
 export function unlockSpeech(): void {
+  unlockSound();
   if (!synth || unlocked) return;
   unlocked = true;
   const u = new SpeechSynthesisUtterance(' ');

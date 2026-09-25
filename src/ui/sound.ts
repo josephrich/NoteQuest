@@ -16,6 +16,12 @@ export function unlockSound(): void {
   void ctx?.resume();
 }
 
+// The unlocked audio context, for playing recorded voice clips (see speech.ts). Voice isn't affected
+// by the sound-effects switch.
+export function audioContext(): AudioContext | null {
+  return ctx;
+}
+
 function blip(freq: number, start: number, dur = 0.09, gain = 0.06, type: OscillatorType = 'triangle') {
   if (!ctx || !enabled) return;
   const t = ctx.currentTime + start;
