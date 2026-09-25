@@ -176,7 +176,8 @@ describe('progress and streaks', () => {
     r = finishLesson(r.progress, outcome(5 * 60_000), at('2026-09-24'));
     expect(r.streakExtended).toBe(false);
     p = r.progress;
-    expect(p.xp).toBe(60);
+    // 3 × 20, plus the "on a roll" bonus on the 2nd lesson (the 3rd came after the goal was met).
+    expect(p.xp).toBe(65);
     expect(p.gems).toBe(24);
     expect(p.items['treble:C4'].correct).toBe(3);
   });

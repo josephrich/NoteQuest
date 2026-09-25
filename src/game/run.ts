@@ -209,7 +209,8 @@ export class LessonRun {
         this.feedback = { correct: true, xp: 0, lightning: false, comboBonus: false };
         return this.feedback;
       }
-      const noteXp = this.stepResults.filter(Boolean).length * XP.burstNote;
+      // Sticking with it counts: finishing a run after a slip still earns at least 1.
+      const noteXp = Math.max(1, this.stepResults.filter(Boolean).length) * XP.burstNote;
       const lightning = this.firstTryOk && t - this.shownAt < LIGHTNING_MS.burstNote * this.current.items.length;
       return this.succeed(t, noteXp + (lightning ? XP.lightning : 0), lightning);
     }

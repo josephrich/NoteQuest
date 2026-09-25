@@ -63,6 +63,12 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   It never runs out, even after the course is finished.
 - **Rewards**:
   - XP, with ⚡ lightning bonuses for fast reads and 🔥 combo bonuses
+  - Effort and growth bonuses:
+    - **On a roll**: the 2nd lesson in a sitting earns ×1.25 XP and the 3rd onwards ×1.5, until
+      the daily goal is met (so it rewards a proper practice, not marathons)
+    - **Improvement**: +5 when a slow note becomes fluent (under 1.5 s), +3 when a slow note gets
+      15% faster, and +3 when an often-missed note is right every time in a lesson
+    - Finishing a three-note run after a slip always earns at least 1 XP
   - A treasure chest after each lesson with a random prize: Common (5–12 gems), Rare (15–25), Epic (30–50) or Legendary (100 gems + a streak freeze). A perfect lesson improves the odds, and four Common chests in a row guarantee a better one
   - A daily goal (10 minutes by default) that builds a 🔥 streak, protected by streak freezes 🧊
     (one earned per week of streak)

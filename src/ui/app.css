@@ -446,3 +446,8 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 .screen-ask { display: grid; justify-items: center; gap: 10px; text-align: center; }
 .screen-ask h2 { margin: 0; }
 .screen-ask p { margin: 0; font-size: 1.1rem; }
+
+/* Bonus XP on the results screen */
+.bonuses { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 588px; display: grid; gap: 8px; }
+.bonuses li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 14px; background: #fff7e0; border: 2px solid #ffd27a; font-weight: 700; }
+.bonuses strong { color: var(--gold); white-space: nowrap; }

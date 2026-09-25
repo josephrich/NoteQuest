@@ -58,7 +58,10 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
     const data: ResultsData = {
       lessonTitle: setup.title,
       unitColor: setup.color,
-      xp: outcome.xp,
+      xp: result.xp,
+      rollCount: result.rollCount,
+      rollBonus: result.rollBonus,
+      improvements: result.improvements,
       chest: outcome.chest,
       onScreen,
       accuracy: outcome.accuracy,

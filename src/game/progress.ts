@@ -2,6 +2,7 @@
 import { LESSON_ORDER, REVIEW_ID, findLesson, isGuide, type ItemId } from './content';
 import { updateStat, type ItemStat } from './lesson';
 import type { ChestRoll } from './rewards';
+import { ROLL_GAP_MS, findImprovements, rollMultiplier, type Improvement } from './bonuses';
 import { initialShop, type Claim, type Prize, type ShopState } from './shop';
 import { storage } from '../platform/storage';
 
@@ -46,6 +47,8 @@ export interface Progress {
   claims: Claim[];
   // Daily Review: the last day one was done, and how many in total.
   review: { lastDay: string | null; total: number };
+  // The current sitting, for the "on a roll" bonus: when the last lesson ended and how many in a row.
+  session?: { lastEnd: number; count: number };
 }
 
 export function initialProgress(refA4 = 440): Progress {
@@ -113,6 +116,12 @@ export interface LessonOutcome {
 
 export interface FinishResult {
   progress: Progress;
+  // All the XP this lesson earned: the lesson's own, plus the bonuses below.
+  xp: number;
+  // "On a roll": this lesson's place in the sitting, and the extra XP it earned (0 if none).
+  rollCount: number;
+  rollBonus: number;
+  improvements: Improvement[];
   goalReachedNow: boolean;
   streakExtended: boolean;
   freezesUsed: number;
@@ -122,14 +131,26 @@ export interface FinishResult {
 export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): FinishResult {
   const key = dayKey(now);
   const before = today(p, now);
+  const items = { ...p.items };
+  for (const a of outcome.answers) items[a.id] = updateStat(items[a.id], { correct: a.correct, ms: a.ms, now: now.getTime() });
+
+  // On a roll: counts practice lessons and reviews started soon after the last one ended. Guides are
+  // short, so they neither count nor break a roll. The bonus stops once the daily goal is met.
+  const t = now.getTime();
+  const isGuideLesson = guideIds.has(outcome.lessonId);
+  const startedAt = t - outcome.ms;
+  const continuing = p.session !== undefined && startedAt - p.session.lastEnd <= ROLL_GAP_MS;
+  const rollCount = isGuideLesson ? (continuing ? p.session!.count : 0) : continuing ? p.session!.count + 1 : 1;
+  const rollBonus = !isGuideLesson && before.ms < goalMs(p) ? Math.round(outcome.xp * (rollMultiplier(rollCount) - 1)) : 0;
+  const improvements = findImprovements(p.items, items, outcome.answers);
+  const xp = outcome.xp + rollBonus + improvements.reduce((n, i) => n + i.xp, 0);
+
   const day: DayLog = {
-    xp: before.xp + outcome.xp,
+    xp: before.xp + xp,
     ms: before.ms + outcome.ms,
     lessons: before.lessons + 1,
     screenMs: (before.screenMs ?? 0) + (outcome.onScreen ? outcome.ms : 0),
   };
-  const items = { ...p.items };
-  for (const a of outcome.answers) items[a.id] = updateStat(items[a.id], { correct: a.correct, ms: a.ms, now: now.getTime() });
   const prevLesson = p.lessons[outcome.lessonId] ?? { completed: 0, bestAccuracy: 0 };
 
   let streak = { ...p.streak };
@@ -160,7 +181,7 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
   return {
     progress: {
       ...p,
-      xp: p.xp + outcome.xp,
+      xp: p.xp + xp,
       gems: p.gems + (outcome.chest?.gems ?? 0),
       commonChests: !outcome.chest ? p.commonChests : outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
       days: { ...p.days, [key]: day },
@@ -172,7 +193,12 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
           : { ...p.lessons, [outcome.lessonId]: { completed: prevLesson.completed + 1, bestAccuracy: Math.max(prevLesson.bestAccuracy, outcome.accuracy) } },
       review: outcome.lessonId === REVIEW_ID ? { lastDay: key, total: p.review.total + 1 } : p.review,
       items,
+      session: { lastEnd: t, count: rollCount },
     },
+    xp,
+    rollCount,
+    rollBonus,
+    improvements,
     goalReachedNow,
     streakExtended,
     freezesUsed,

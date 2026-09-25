@@ -6,6 +6,9 @@ import { Chest } from './Chest';
 import { GoalRing } from './Home';
 import { goalMs, today } from '../game/progress';
 import type { ChestRoll } from '../game/rewards';
+import type { Improvement } from '../game/bonuses';
+import { intervalLabel, itemInterval } from '../game/content';
+import { friendlyName } from '../game/review';
 import type { Screen } from './App';
 
 export interface ResultsData {
@@ -17,6 +20,11 @@ export interface ResultsData {
   guide?: boolean;
   // Played on the on-screen piano (half XP, no lightning bonus).
   onScreen?: boolean;
+  // Bonuses included in `xp`: the lesson's place in this sitting and its "on a roll" extra, and notes
+  // that got faster or more accurate.
+  rollCount?: number;
+  rollBonus?: number;
+  improvements?: Improvement[];
   accuracy: number;
   fastestMs: number | null;
   bestCombo: number;
@@ -26,6 +34,19 @@ export interface ResultsData {
   goalReachedNow: boolean;
   freezeEarned: boolean;
   freezesUsed: number;
+}
+
+const IMPROVEMENT_TEXT: Record<Improvement['kind'], (name: string) => string> = {
+  fluent: (n) => `🌟 You can read ${n} quickly now!`,
+  faster: (n) => `🚀 Getting faster at ${n}!`,
+  accurate: (n) => `🎯 You got ${n} right every time!`,
+};
+
+// "treble G", "middle C", or an interval as a plural: "skips", "4ths", "octaves".
+function improvedName(id: string): string {
+  const size = itemInterval(id);
+  if (size === null) return friendlyName(id);
+  return `${intervalLabel(size).split(' · ').pop()!.toLowerCase()}s`;
 }
 
 function Confetti() {
@@ -43,7 +64,10 @@ function Confetti() {
   return (
     <div className="confetti" aria-hidden="true">
       {pieces.map((p, i) => (
-        <i key={i} style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, rotate: `${p.rotate}deg` }} />
+        <i
+          key={i}
+          style={{ left: `${p.left}%`, background: p.color, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s`, rotate: `${p.rotate}deg` }}
+        />
       ))}
     </div>
   );
@@ -96,6 +120,23 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
           </div>
         </div>
       )}
+
+      {data.rollBonus || data.improvements?.length ? (
+        <ul className="bonuses" aria-label="Bonus XP">
+          {data.rollBonus ? (
+            <li>
+              <span>🔥 On a roll! Lesson {data.rollCount} in a row</span>
+              <strong>+{data.rollBonus} XP</strong>
+            </li>
+          ) : null}
+          {data.improvements?.map((i) => (
+            <li key={i.id}>
+              <span>{IMPROVEMENT_TEXT[i.kind](improvedName(i.id))}</span>
+              <strong>+{i.xp} XP</strong>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {data.chest && (
         <Chest roll={data.chest} totalAfter={progress.gems} onOpened={() => setBigWin(data.chest?.rarity === 'epic' || data.chest?.rarity === 'legendary')} />

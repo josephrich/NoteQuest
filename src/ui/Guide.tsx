@@ -89,7 +89,10 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
     const data: ResultsData = {
       lessonTitle: guide.title,
       unitColor: unit.color,
-      xp: outcome.xp,
+      xp: result.xp,
+      rollCount: result.rollCount,
+      rollBonus: result.rollBonus,
+      improvements: result.improvements,
       chest: outcome.chest,
       guide: true,
       onScreen,
