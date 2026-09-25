@@ -6,11 +6,16 @@
 //   npm run voices -- --dry-run    list what would be recorded, no key needed
 //   npm run voices -- --check      warn if any line has no recording, and offer to record them
 //                                  (runs as part of `npm run ios`)
+//   npm run voices -- --sample     record a few of the app's lines in several voices, into
+//                                  voice-samples/ (not part of the app), to compare before choosing
+//   npm run voices -- --sample sage,nova    ...in just these voices
 //
 // The key is typed in hidden, so it doesn't end up in your Terminal history. (Setting
 // OPENAI_API_KEY in the environment works too.)
 //
-// Optional: VOICE (default "coral") and VOICE_MODEL (default "gpt-4o-mini-tts").
+// Optional: VOICE (see VOICE SETTINGS below), VOICE_MODEL (default "gpt-4o-mini-tts") and ACCENT
+// ("australian", the default, or "neutral"). After changing any of them, re-record everything
+// with --force so every line sounds the same.
 // Recordings that no longer match any line are deleted. Lines without a recording use the device's
 // voice in the app, so this never has to be run for the app to work.
 import { createServer } from 'vite';
@@ -28,14 +33,54 @@ const indexFile = join(root, 'src/voice/clips.json');
 const force = process.argv.includes('--force');
 const dryRun = process.argv.includes('--dry-run');
 const check = process.argv.includes('--check');
+const sampleArg = process.argv.indexOf('--sample');
+const sample = sampleArg >= 0;
 let key = process.env.OPENAI_API_KEY;
+
+// ---- VOICE SETTINGS ------------------------------------------------------------------------------
+// Every line is recorded separately, so the instructions are specific: anything left open (accent,
+// energy, speed) can come out differently from one line to the next.
 const voice = process.env.VOICE ?? 'coral';
 const model = process.env.VOICE_MODEL ?? 'gpt-4o-mini-tts';
-const INSTRUCTIONS = [
-  'You are a warm, patient, encouraging piano teacher talking to a child of about 8.',
-  'Speak clearly and a little slowly, with a friendly smile in your voice. Keep it natural, not over the top.',
-  'Letter names like "ay", "bee", "see", "dee", "ee", "eff" and "gee" are musical note names: say them as single letters.',
-].join(' ');
+const ACCENTS = {
+  australian: 'A light, natural Australian English accent, as a teacher in Melbourne would speak. Not broad or exaggerated.',
+  neutral: 'A clear, neutral English accent.',
+};
+const accent = ACCENTS[process.env.ACCENT ?? 'australian'] ?? ACCENTS.australian;
+const INSTRUCTIONS = `
+Who: A kind, patient piano teacher talking one-to-one with an 8-year-old pupil sitting at the piano.
+
+Accent: ${accent}
+
+Tone: Warm, calm and encouraging, with a gentle smile in the voice. Genuinely pleased when something
+goes well, but never gushing, sing-song or over the top. When something is wrong ("Not quite..."),
+stay relaxed and reassuring, never disappointed. Talk to the child as a capable learner, not a baby.
+
+Pacing: Unhurried, a little slower than normal conversation, so a young child can follow. A short
+pause after commas and colons, and between sentences. Keep the same pace and energy on every line.
+
+Emphasis: Lightly stress the one word that matters most, usually the musical idea ("major",
+"minor", "sharp", "semitone", "root", "higher", "lower"). Questions rise naturally at the end.
+
+Pronunciation: Say note names crisply as single letters: "ay", "bee", "see", "dee", "ee", "eff",
+"gee" are the letters A to G. "Sharp", "flat" and "natural" are musical words: say them clearly.
+Say "3rd" as "third", "5th" as "fifth", "4th" as "fourth". "Semitone" is "SEM-ee-tone". "Treble"
+rhymes with "pebble".
+
+Don't: add words, sound effects or laughter; read punctuation aloud; whisper or shout.
+`.trim();
+
+// Candidates for --sample: voices that suit a warm teacher (you can name any OpenAI voice).
+const SAMPLE_VOICES = ['coral', 'sage', 'nova', 'shimmer', 'ballad', 'fable'];
+// Lines from the app that exercise the tricky parts: note names, sharps, a question, a correction.
+const SAMPLE_LINES = [
+  'New chord!',
+  'D major is D, F♯ and A. D to F♯ is a major 3rd: 4 semitones. Fingers 1, 3 and 5.',
+  'Tone or semitone?',
+  'Not quite. The natural cancels the flat: plain B. Try again!',
+  'The bass clef dots hug the F line: the 4th line up.',
+];
+// ---------------------------------------------------------------------------------------------------
 
 // Load the app's own line list (TypeScript) through Vite, so this always matches what the app says.
 const server = await createServer({ root, logLevel: 'error', server: { middlewareMode: true, hmr: false }, appType: 'custom' });
@@ -103,6 +148,46 @@ function askHidden(question) {
   });
 }
 
+async function speech(input, withVoice) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, voice: withVoice, input, instructions: INSTRUCTIONS, response_format: 'mp3' }),
+    });
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    const detail = await res.text();
+    // Rate limits and server hiccups are worth retrying; anything else (bad key, no credit) isn't.
+    if ((res.status === 429 || res.status >= 500) && attempt < 5) {
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      continue;
+    }
+    throw new Error(`OpenAI said ${res.status} for "${input}" (voice ${withVoice}): ${detail.slice(0, 300)}`);
+  }
+}
+
+// Samples: the same few lines in each voice, one file per voice, to listen to side by side.
+if (sample) {
+  if (!key) key = await askHidden('Paste your OpenAI API key (it will not be shown): ');
+  if (!key) process.exit(1);
+  const named = process.argv[sampleArg + 1];
+  const sampleVoices = named && !named.startsWith('--') ? named.split(',') : SAMPLE_VOICES;
+  const dir = join(root, 'voice-samples');
+  mkdirSync(dir, { recursive: true });
+  const input = SAMPLE_LINES.map(speakable).join(' ... ');
+  console.log(`Recording samples in: ${sampleVoices.join(', ')}`);
+  for (const v of sampleVoices) {
+    try {
+      writeFileSync(join(dir, `${v}.mp3`), await speech(input, v));
+      console.log(`  voice-samples/${v}.mp3`);
+    } catch (e) {
+      console.log(`  ${v}: ${e.message}`);
+    }
+  }
+  console.log('Listen, pick one, then:  VOICE=<name> npm run voices -- --force');
+  process.exit(0);
+}
+
 if (todo.length && !key) {
   if (!process.stdin.isTTY) {
     console.error('No OPENAI_API_KEY set.');
@@ -115,24 +200,7 @@ if (todo.length && !key) {
 mkdirSync(outDir, { recursive: true });
 
 async function record(c) {
-  for (let attempt = 1; ; attempt++) {
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, voice, input: c.input, instructions: INSTRUCTIONS, response_format: 'mp3' }),
-    });
-    if (res.ok) {
-      writeFileSync(clipFile(c.id), Buffer.from(await res.arrayBuffer()));
-      return;
-    }
-    const detail = await res.text();
-    // Rate limits and server hiccups are worth retrying; anything else (bad key, no credit) isn't.
-    if ((res.status === 429 || res.status >= 500) && attempt < 5) {
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
-      continue;
-    }
-    throw new Error(`OpenAI said ${res.status} for "${c.input}": ${detail.slice(0, 300)}`);
-  }
+  writeFileSync(clipFile(c.id), await speech(c.input, voice));
 }
 
 // A few at a time. If something goes wrong part way, what was recorded is kept and listed, and

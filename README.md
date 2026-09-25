@@ -176,6 +176,8 @@ npm run voices                  # records new or changed lines; asks for your Op
 npm run voices -- --force       # re-record everything, e.g. with VOICE=nova npm run voices -- --force
 npm run voices -- --dry-run     # list what would be recorded
 npm run voices -- --check       # warn about unrecorded lines and offer to record them (part of npm run ios)
+npm run voices -- --sample      # a few app lines in several voices, into voice-samples/, to compare
+ACCENT=neutral npm run voices -- --force   # re-record with a neutral accent (default: light Australian)
 ```
 
 Recordings go in `public/voice/` (MP3 audio named `.mpga`, which the iOS app serves reliably) and are listed in `src/voice/clips.json`; commit both. Editing a line

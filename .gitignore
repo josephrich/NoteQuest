@@ -5,3 +5,6 @@ dist/
 
 # Xcode package resolution (local to each Mac)
 ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Voice samples to listen to (npm run voices -- --sample)
+voice-samples/
