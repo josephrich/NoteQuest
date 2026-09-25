@@ -23,6 +23,7 @@ export class Listener {
   private chordSubs = new Set<ChordListener>();
   private levelSubs = new Set<LevelListener>();
   private chordTarget: number[] | null = null;
+  private chordAlternatives: number[][] = [];
   private raf = 0;
   private frame = 0;
   private starting: Promise<void> | null = null;
@@ -58,7 +59,7 @@ export class Listener {
           this.onsets = new OnsetDetector();
           this.notes = new NoteTracker({ refA4: this.refA4 });
           this.chords = new ChordTracker({ refA4: this.refA4, sampleRate: this.mic.sampleRate, fftSize: FFT_SIZE });
-          if (this.chordTarget) this.chords.setTarget(this.chordTarget);
+          if (this.chordTarget) this.chords.setTarget(this.chordTarget, this.chordAlternatives);
           document.addEventListener('visibilitychange', this.onVisibility);
           this.loop();
         })
@@ -92,10 +93,12 @@ export class Listener {
     return () => this.levelSubs.delete(fn);
   }
 
-  // Chord checking needs to know what to listen for; pass null to stop.
-  listenForChord(midis: number[] | null, fn?: ChordListener): () => void {
+  // Chord checking needs to know what to listen for (and, optionally, other chords to recognise if
+  // it's not that one); pass null to stop.
+  listenForChord(midis: number[] | null, fn?: ChordListener, alternatives: number[][] = []): () => void {
     this.chordTarget = midis;
-    if (midis) this.chords.setTarget(midis);
+    this.chordAlternatives = alternatives;
+    if (midis) this.chords.setTarget(midis, alternatives);
     if (fn) this.chordSubs.add(fn);
     return () => {
       if (fn) this.chordSubs.delete(fn);
@@ -125,6 +128,27 @@ export class Listener {
     this.emitNote({ ...ev, stage: 'sure' });
   }
 
+  // Pretend a chord was played (automated tests): it passes if it's the chord being listened for.
+  simulateChord(midis: number[]): void {
+    const t = performance.now();
+    const key = (a: number[]) => [...a].sort((x, y) => x - y).join(',');
+    const same = (a: number[]) => key(a) === key(midis);
+    const pass = this.chordTarget !== null && same(this.chordTarget);
+    const matched = this.chordAlternatives.findIndex(same);
+    const ev: ChordEvent = {
+      pass,
+      explained: pass ? 1 : 0.5,
+      presence: [],
+      unexplained: [],
+      chroma: new Float64Array(12),
+      onsetT: t,
+      t,
+      matched: pass || matched < 0 ? null : matched,
+      close: !pass && matched < 0,
+    };
+    this.chordSubs.forEach((fn) => fn(ev));
+  }
+
   private onVisibility = () => {
     if (document.visibilityState === 'visible') void this.mic.resume();
   };
@@ -141,8 +165,9 @@ export class Listener {
       if (noteEvent) this.emitNote(noteEvent);
     }
     if (this.chordTarget) {
-      const chordEvent = this.chords.update({ t: f.t, onset, mags: f.mags });
-      if (chordEvent) this.chordSubs.forEach((fn) => fn(chordEvent));
+      // As with notes, nothing is reported while the app is talking or playing a chord itself.
+      const chordEvent = this.chords.update({ t: f.t, onset: onset && !this.held, mags: f.mags });
+      if (chordEvent && !this.held) this.chordSubs.forEach((fn) => fn(chordEvent));
     }
     if (this.frame++ % 3 === 0 && this.levelSubs.size) {
       const level = { rms: f.rms, pitch, gate: this.onsets.gate };

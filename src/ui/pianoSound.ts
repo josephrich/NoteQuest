@@ -1,7 +1,8 @@
 // The on-screen piano's sound: a synthesised piano note (struck strings, each partial slightly
 // sharp and fading at its own rate), made once per note and cached. Played through the shared,
 // tap-unlocked audio context. It isn't affected by the sound-effects switch: it's the instrument.
-import { audioContext } from './sound';
+import { audioContext, unlockSound } from './sound';
+import { listener } from '../engine/listener';
 
 const DURATION = 1.6;
 const cache = new Map<number, AudioBuffer>();
@@ -45,4 +46,13 @@ export function playPianoNote(midi: number): void {
   src.buffer = buffer;
   src.connect(ctx.destination);
   src.start();
+}
+
+// Plays notes together, for "Hear it" buttons. The note listener is paused meanwhile, so the app
+// doesn't hear its own chord as him playing.
+export function hearChord(midis: number[]): void {
+  unlockSound();
+  listener.hold();
+  midis.forEach(playPianoNote);
+  window.setTimeout(() => listener.release(), 1400);
 }

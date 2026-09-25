@@ -42,7 +42,7 @@ const IMPROVEMENT_TEXT: Record<Improvement['kind'], (name: string) => string> = 
   accurate: (n) => `🎯 You got ${n} right every time!`,
 };
 
-// "treble G", "middle C", or an interval as a plural: "skips", "4ths", "octaves".
+// "treble G", "middle C", "the C chord", or an interval as a plural: "skips", "4ths", "octaves".
 function improvedName(id: string): string {
   const size = itemInterval(id);
   if (size === null) return friendlyName(id);

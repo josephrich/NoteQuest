@@ -1,13 +1,14 @@
 // The rules of a lesson in progress: judging answers, XP, combos and retries.
 // Kept free of React and audio so it can be unit tested.
-import { intervalItem, itemMidi, type ItemId } from './content';
-import { challengeAnswer, nameOptions, type Challenge } from './lesson';
+import { itemMidi, type ItemId } from './content';
+import { challengeAnswer, nameOptions, statItem, type Challenge } from './lesson';
 import type { LessonOutcome } from './progress';
 import { rollChest } from './rewards';
 
-export const XP = { name: 1, play: 2, burstNote: 1, lightning: 1, comboBonus: 2, complete: 5, perfect: 5 } as const;
+// A chord counts as one play (and one burst note), but earns a little more: it's three notes.
+export const XP = { name: 1, play: 2, chord: 3, burstNote: 1, burstChord: 2, lightning: 1, comboBonus: 2, complete: 5, perfect: 5 } as const;
 // A reading faster than this earns a lightning bonus.
-export const LIGHTNING_MS = { name: 1500, interval: 2000, play: 2000, burstNote: 1800 } as const;
+export const LIGHTNING_MS = { name: 1500, interval: 2000, chordName: 2000, play: 2000, chord: 3000, burstNote: 1800, burstChord: 2500 } as const;
 const MAX_PLAY_TRIES = 3;
 const MAX_REQUEUES = 3;
 // Time counted towards the daily goal per challenge is capped, so wandering off doesn't count.
@@ -23,6 +24,16 @@ export interface Feedback {
   // For wrong answers: what he played or tapped, and whether it was the right letter in the wrong octave.
   heard?: string;
   octaveSlip?: boolean;
+  // A chord with one note wrong.
+  close?: boolean;
+}
+
+// What was heard (or pressed on screen) when a chord was asked for.
+export interface ChordAttempt {
+  correct: boolean;
+  // Another chord it was recognised as, e.g. "the F chord".
+  heard?: string;
+  close?: boolean;
 }
 
 export class LessonRun {
@@ -94,7 +105,7 @@ export class LessonRun {
   play(midi: number, t: number): Feedback | null {
     if (this.phase !== 'asking') return null;
     const c = this.current;
-    if (c.kind === 'name' || c.kind === 'interval') return null;
+    if (c.kind === 'name' || c.kind === 'interval' || c.chord) return null;
     const target = itemMidi(this.expected);
     const correct = midi === target;
     if (c.kind === 'meet') {
@@ -107,8 +118,20 @@ export class LessonRun {
       }
       return this.succeed(t, 0, false);
     }
-    if (c.kind === 'play') return this.judgePlay(midi, target, t);
-    return this.judgeBurst(midi, target, t);
+    const miss = { heard: midiLetter(midi), octaveSlip: (midi - target) % 12 === 0 };
+    if (c.kind === 'play') return this.judgePlay(correct, miss, t);
+    return this.judgeBurst(correct, miss, t);
+  }
+
+  // A chord played (heard through the microphone, or pressed on the on-screen piano) at time `t`.
+  playChord(attempt: ChordAttempt, t: number): Feedback | null {
+    if (this.phase !== 'asking') return null;
+    const c = this.current;
+    if (!c.chord || c.kind === 'name') return null;
+    if (c.kind === 'meet') return attempt.correct ? this.succeed(t, 0, false) : null;
+    const miss = { heard: attempt.heard, close: attempt.close };
+    if (c.kind === 'play') return this.judgePlay(attempt.correct, miss, t);
+    return this.judgeBurst(attempt.correct, miss, t);
   }
 
   // A tapped answer for 'name' (a letter) and 'interval' challenges, or "Got it" on a 'meet' card.
@@ -117,11 +140,11 @@ export class LessonRun {
     const c = this.current;
     if (c.kind === 'meet') return this.succeed(t, 0, false);
     if ((c.kind !== 'name' && c.kind !== 'interval') || letter === null) return null;
-    const id = c.kind === 'interval' ? intervalItem(c.interval!) : c.items[0];
+    const id = statItem(c);
     const ms = t - this.shownAt;
     if (letter === challengeAnswer(c)) {
       this.record(id, true, ms);
-      const lightning = ms < (c.kind === 'interval' ? LIGHTNING_MS.interval : LIGHTNING_MS.name);
+      const lightning = ms < (c.kind === 'interval' ? LIGHTNING_MS.interval : c.chord ? LIGHTNING_MS.chordName : LIGHTNING_MS.name);
       return this.succeed(t, XP.name + (lightning ? XP.lightning : 0), lightning);
     }
     this.record(id, false, null);
@@ -172,20 +195,20 @@ export class LessonRun {
     };
   }
 
-  private judgePlay(midi: number, target: number, t: number): Feedback {
-    const id = this.expected;
+  private judgePlay(correct: boolean, miss: Omit<Feedback, 'correct' | 'xp' | 'lightning' | 'comboBonus'>, t: number): Feedback {
+    const c = this.current;
+    const id = statItem(c, this.step);
     const ms = t - this.shownAt;
-    if (midi === target) {
+    if (correct) {
       if (this.tries === 0) this.record(id, true, ms);
-      const lightning = this.tries === 0 && ms < LIGHTNING_MS.play;
-      const xp = this.tries === 0 ? XP.play + (lightning ? XP.lightning : 0) : 1;
+      const lightning = this.tries === 0 && ms < (c.chord ? LIGHTNING_MS.chord : LIGHTNING_MS.play);
+      const xp = this.tries === 0 ? (c.chord ? XP.chord : XP.play) + (lightning ? XP.lightning : 0) : 1;
       return this.succeed(t, xp, lightning);
     }
     if (this.tries === 0) this.record(id, false, null);
     this.tries++;
     this.breakCombo();
-    const octaveSlip = (midi - target) % 12 === 0;
-    this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, heard: midiLetter(midi), octaveSlip };
+    this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, ...miss };
     if (this.tries >= MAX_PLAY_TRIES) {
       // Show him the answer and move on rather than getting stuck.
       this.scored++;
@@ -195,30 +218,31 @@ export class LessonRun {
     return this.feedback;
   }
 
-  private judgeBurst(midi: number, target: number, t: number): Feedback {
-    const id = this.expected;
+  private judgeBurst(correct: boolean, miss: Omit<Feedback, 'correct' | 'xp' | 'lightning' | 'comboBonus'>, t: number): Feedback {
+    const c = this.current;
+    const id = statItem(c, this.step);
     const ms = t - this.stepShownAt;
-    if (midi === target) {
+    if (correct) {
       const firstGo = this.tries === 0;
       this.record(id, firstGo, firstGo ? ms : null);
       this.stepResults[this.step] = firstGo;
       this.step++;
       this.tries = 0;
       this.stepShownAt = t;
-      if (this.step < this.current.items.length) {
+      if (this.step < c.items.length) {
         this.feedback = { correct: true, xp: 0, lightning: false, comboBonus: false };
         return this.feedback;
       }
       // Sticking with it counts: finishing a run after a slip still earns at least 1.
-      const noteXp = Math.max(1, this.stepResults.filter(Boolean).length) * XP.burstNote;
-      const lightning = this.firstTryOk && t - this.shownAt < LIGHTNING_MS.burstNote * this.current.items.length;
+      const each = c.chord ? XP.burstChord : XP.burstNote;
+      const noteXp = Math.max(1, this.stepResults.filter(Boolean).length * each);
+      const lightning = this.firstTryOk && t - this.shownAt < (c.chord ? LIGHTNING_MS.burstChord : LIGHTNING_MS.burstNote) * c.items.length;
       return this.succeed(t, noteXp + (lightning ? XP.lightning : 0), lightning);
     }
     if (this.tries === 0) this.stepResults[this.step] = false;
     this.tries++;
     this.breakCombo();
-    const octaveSlip = (midi - target) % 12 === 0;
-    this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, heard: midiLetter(midi), octaveSlip };
+    this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, ...miss };
     return this.feedback;
   }
 
@@ -269,7 +293,7 @@ export class LessonRun {
   private requeue(c: Challenge) {
     if (this.requeues >= MAX_REQUEUES) return;
     this.requeues++;
-    const again = c.kind === 'name' ? { ...c, options: nameOptions(c.items[0], this.rnd) } : { ...c };
+    const again = c.kind === 'name' && !c.chord ? { ...c, options: nameOptions(c.items[0], this.rnd) } : { ...c };
     this.queue = [...this.queue, again];
   }
 

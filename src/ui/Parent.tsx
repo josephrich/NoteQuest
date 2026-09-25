@@ -6,7 +6,7 @@ import { readyPlayers } from '../game/players';
 import { listener } from '../engine/listener';
 import { freqToMidiFloat, midiName } from '../engine/music';
 import { dayKey, initialProgress } from '../game/progress';
-import { intervalLabel, itemClef, itemInterval, itemNote, type ItemId } from '../game/content';
+import { chordName, chordRoot, intervalLabel, isChordItem, itemClef, itemInterval, itemNote, type ItemId } from '../game/content';
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
@@ -147,7 +147,11 @@ function ReadingSpeeds() {
           {rows.map((r) => (
             <tr key={r.id}>
               <td>
-                {itemInterval(r.id) !== null ? (
+                {isChordItem(r.id) ? (
+                  <>
+                    {chordName(chordRoot(r.id))} chord <span className="muted">{itemClef(chordRoot(r.id))}</span>
+                  </>
+                ) : itemInterval(r.id) !== null ? (
                   <>
                     {intervalLabel(itemInterval(r.id)!)} <span className="muted">interval</span>
                   </>

@@ -460,3 +460,4 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 }
 .swatch-dot { width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15); }
 .swatch-on { border-color: var(--primary); background: #efeaff; }
+.hear-it { display: block; margin: 8px auto 0; font-size: 1.1rem; font-weight: 800; }

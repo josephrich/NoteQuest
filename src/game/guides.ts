@@ -4,6 +4,7 @@
 // They sit on the path just before the lessons that need them.
 import type { Clef } from '../engine/music';
 
+// Each entry in `notes` is one note ("C4"), or a chord written as its notes with spaces ("C4 E4 G4").
 export type Picture =
   | { clef: Clef; notes: string[]; labels?: (string | undefined)[]; highlight?: number[] }
   | { clef: 'grand'; treble: (string | null)[]; bass: (string | null)[]; labels?: (string | undefined)[]; highlight?: number[] };
@@ -14,9 +15,10 @@ export interface Keys {
   labels?: (string | undefined)[];
 }
 
+// `sound`: notes (spelled) that a "Hear it" button plays together, for hearing what a chord sounds like.
 export type GuideCard =
-  | { kind: 'read'; text: string; picture?: Picture; keys?: Keys }
-  | { kind: 'quiz'; text: string; picture?: Picture; keys?: Keys; options: string[]; answer: string; why: string }
+  | { kind: 'read'; text: string; picture?: Picture; keys?: Keys; sound?: string[] }
+  | { kind: 'quiz'; text: string; picture?: Picture; keys?: Keys; sound?: string[]; options: string[]; answer: string; why: string }
   // Play these notes (spelled, e.g. "C4") in order on the piano. No keys shown: reading is the point.
   | { kind: 'play'; text: string; picture: Picture; play: string[] };
 
@@ -429,6 +431,148 @@ export const GUIDES: Record<string, Guide> = {
         keys: { notes: ['C3', 'C4'] },
       },
       { kind: 'play', text: 'Play middle C, then leap up an octave.', picture: { clef: 'treble', notes: ['C4', 'C5'] }, play: ['C4', 'C5'] },
+    ],
+  },
+
+  chords: {
+    id: 'chords',
+    title: 'Stacking chords',
+    cards: [
+      {
+        kind: 'read',
+        text: 'A chord is three notes played together.',
+        picture: { clef: 'treble', notes: ['C4 E4 G4'] },
+        keys: { notes: ['C4', 'E4', 'G4'] },
+        sound: ['C4', 'E4', 'G4'],
+      },
+      {
+        kind: 'read',
+        text: 'Stack them line, line, line, like a snowman.',
+        picture: { clef: 'treble', notes: ['C4', 'E4', 'G4', 'C4 E4 G4'], labels: ['C', 'E', 'G', undefined] },
+        keys: { notes: ['C4', 'E4', 'G4'] },
+      },
+      {
+        kind: 'read',
+        text: 'Or space, space, space.',
+        picture: { clef: 'treble', notes: ['F4 A4 C5'] },
+        keys: { notes: ['F4', 'A4', 'C5'], labels: ['F', 'A', 'C'] },
+        sound: ['F4', 'A4', 'C5'],
+      },
+      {
+        kind: 'read',
+        text: 'The bottom note names the chord. This is the G chord.',
+        picture: { clef: 'treble', notes: ['G4 B4 D5'], labels: ['G chord'] },
+        keys: { notes: ['G4', 'B4', 'D5'], labels: ['G', undefined, undefined] },
+      },
+      {
+        kind: 'quiz',
+        text: 'Which chord is this? Look at the bottom note.',
+        picture: { clef: 'treble', notes: ['F4 A4 C5'] },
+        options: ['C', 'F', 'G'],
+        answer: 'F',
+        why: 'The bottom note is F, in the first space.',
+      },
+      {
+        kind: 'read',
+        text: 'Use fingers 1, 3 and 5. Skip a key between each.',
+        picture: { clef: 'treble', notes: ['C4 E4 G4'] },
+        keys: { notes: ['C4', 'E4', 'G4'], labels: ['1', '3', '5'] },
+      },
+      { kind: 'play', text: 'Play C, E and G, one at a time.', picture: { clef: 'treble', notes: ['C4', 'E4', 'G4'] }, play: ['C4', 'E4', 'G4'] },
+      {
+        kind: 'read',
+        text: 'Now press all three at once. That is the C chord!',
+        picture: { clef: 'treble', notes: ['C4 E4 G4'], labels: ['C chord'] },
+        keys: { notes: ['C4', 'E4', 'G4'] },
+        sound: ['C4', 'E4', 'G4'],
+      },
+    ],
+  },
+
+  'left-chords': {
+    id: 'left-chords',
+    title: 'Left-hand chords',
+    cards: [
+      {
+        kind: 'read',
+        text: 'Bass clef chords stack the same way.',
+        picture: { clef: 'bass', notes: ['C3 E3 G3'], labels: ['C chord'] },
+        keys: { notes: ['C3', 'E3', 'G3'] },
+        sound: ['C3', 'E3', 'G3'],
+      },
+      {
+        kind: 'read',
+        text: 'Your left hand is the other way round: little finger on the bottom.',
+        picture: { clef: 'bass', notes: ['C3 E3 G3'] },
+        keys: { notes: ['C3', 'E3', 'G3'], labels: ['5', '3', '1'] },
+      },
+      {
+        kind: 'quiz',
+        text: 'Check the clef! Which chord is this?',
+        picture: { clef: 'bass', notes: ['G2 B2 D3'] },
+        options: ['E', 'F', 'G', 'A'],
+        answer: 'G',
+        why: 'In bass clef, the bottom line is G.',
+      },
+      { kind: 'play', text: 'Play bass C, E and G, one at a time.', picture: { clef: 'bass', notes: ['C3', 'E3', 'G3'] }, play: ['C3', 'E3', 'G3'] },
+    ],
+  },
+
+  'major-minor': {
+    id: 'major-minor',
+    title: 'Happy & sad chords',
+    cards: [
+      {
+        kind: 'read',
+        text: 'Some chords sound happy. They are called major.',
+        picture: { clef: 'treble', notes: ['C4 E4 G4'], labels: ['C major'] },
+        keys: { notes: ['C4', 'E4', 'G4'] },
+        sound: ['C4', 'E4', 'G4'],
+      },
+      {
+        kind: 'read',
+        text: 'Some sound sad. They are called minor.',
+        picture: { clef: 'treble', notes: ['A4 C5 E5'], labels: ['A minor'] },
+        keys: { notes: ['A4', 'C5', 'E5'] },
+        sound: ['A4', 'C5', 'E5'],
+      },
+      {
+        kind: 'quiz',
+        text: 'Listen! Happy or sad?',
+        picture: { clef: 'treble', notes: ['D4 F4 A4'] },
+        sound: ['D4', 'F4', 'A4'],
+        options: ['Happy', 'Sad'],
+        answer: 'Sad',
+        why: 'The D chord is minor: it sounds sad.',
+      },
+      {
+        kind: 'read',
+        text: 'On the white keys, C, F and G chords are major.',
+        picture: { clef: 'treble', notes: ['C4 E4 G4', 'F4 A4 C5', 'G4 B4 D5'], labels: ['C', 'F', 'G'] },
+        sound: ['F4', 'A4', 'C5'],
+      },
+      {
+        kind: 'read',
+        text: 'D, E and A chords are minor.',
+        picture: { clef: 'treble', notes: ['D4 F4 A4', 'E4 G4 B4', 'A4 C5 E5'], labels: ['D', 'E', 'A'] },
+        sound: ['E4', 'G4', 'B4'],
+      },
+      {
+        kind: 'quiz',
+        text: 'Which chord is this?',
+        picture: { clef: 'treble', notes: ['F4 A4 C5'] },
+        options: ['F major', 'F minor', 'A minor'],
+        answer: 'F major',
+        why: 'The bottom note is F, and F chords are major.',
+      },
+      {
+        kind: 'quiz',
+        text: 'And this one?',
+        picture: { clef: 'bass', notes: ['A2 C3 E3'] },
+        options: ['C major', 'A major', 'A minor'],
+        answer: 'A minor',
+        why: 'The bottom note is A, and A chords are minor.',
+      },
     ],
   },
 };

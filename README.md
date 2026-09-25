@@ -21,21 +21,28 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   and the 👤 button on the home screen switches player. Grown-ups can add and remove players. The
   piano tuning and the daily reminder are shared by everyone on the device. An existing save
   becomes the first player automatically.
-- **Path of lessons** in five units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines, and
-  Steps, Skips & Leaps. New notes are taught relative to landmark notes (middle C, the G line, the F
+- **Path of lessons** in six units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines,
+  Steps, Skips & Leaps, and Chords. New notes are taught relative to landmark notes (middle C, the G line, the F
   line, treble and bass C).
 - **Interval reading** (Unit 5): the skill that stops note-by-note decoding. Steps (line to space),
   skips (line to line), 4ths, 5ths and octaves, in both clefs. He names the jump between two notes,
   plays a pair when told only the first note, and plays short four-note melodies built from the
   jumps he knows.
-- **Mini-lessons** (📖 on the path): 11 short explainers placed just before the lessons that need
+- **Chords** (Unit 6): three-note chords on the white keys, stacked line-line-line or
+  space-space-space and named by their bottom note. C, F and G, then D, E and A, in the right hand
+  and then the left. Later lessons name them in full (C, F and G are major; D, E and A are minor),
+  after a mini-lesson with 🔊 Hear it buttons for hearing happy and sad chords. He names chords,
+  plays them, and plays runs of three chords. If he plays a different chord from the lesson, it
+  says which one ("That was the F chord"). With one finger on the wrong key it says "Close! One note
+  is off". On the on-screen piano he taps the three keys one at a time.
+- **Mini-lessons** (📖 on the path): 14 short explainers placed just before the lessons that need
   them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
-  spaces, the grand staff, ledger lines, and steps, skips, leaps and octaves. Each has a few cards
+  spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, and chords. Each has a few cards
   with pictures on the staff, quick tap questions and "now play it" moments. Wrong answers just
   explain and let him retry. The first read earns a chest; re-reading earns a little XP. Guides
   never lock the path, so lessons he's already reached stay open.
 - **Show more, say less, and read aloud**: explainer and new-note cards show the matching keys lit
-  up on a small piano keyboard under the staff (middle C always has a dot), and every card is one
+  up on a small piano keyboard under the staff (middle C is always marked with a small grey caption), and every card is one
   short sentence. A 🔊 button reads explanations and prompts aloud with the device's built-in voice.
   Grown-ups can switch on **Read aloud automatically** for younger players. Lines play natural
   recordings made with OpenAI text-to-speech where they exist (see *Voice recordings* below), and
@@ -46,7 +53,7 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   real piano is the best way to learn, and a note stays under the switch while it's on. New players
   can pick it at setup ("No piano nearby?"), and grown-ups can hide the option per player. It's a fixed-range keyboard for each
   clef (A3–C6 treble, D2–E4 bass) with a synthesised piano sound and no letters on the keys (only
-  middle C's dot), so it's still a reading exercise. It earns half XP and no ⚡ bonus, its timings
+  a small grey "middle C" caption under the keyboard), so it's still a reading exercise. It earns half XP and no ⚡ bonus, its timings
   don't count towards reading speeds, and the practice chart shows on-screen time striped. If the
   microphone isn't available, lessons use it automatically instead of tap-only questions.
 - **Clear modes**: tapping (orange, 👆), playing (blue, 🎹) and learning (purple, 📖) each have
@@ -118,7 +125,12 @@ use the deployed site or an https tunnel.
   synthetic tests, 0.5% of random speech passes this check, while every piano key does.
 - **Chords**: verified rather than transcribed (`src/engine/chord.ts`). Every expected note's
   fundamental must be present, and at least 80% of the spectral energy must be explained by the
-  harmonics of those notes.
+  harmonics of those notes. A chord that doesn't pass is checked against the lesson's other chords,
+  and against the chord with one note moved by a semitone or two. Only those count as wrong, so a
+  missing note (fingers still going down) or talking is ignored. Each attempt is judged from a
+  rolling average of the last few frames, so a chord put down one finger at a time still passes.
+  In synthetic tests every chord in the unit passes, loud or soft, and none of 120 random voices
+  counted as a chord or as a wrong one.
 - **Tuning**: notes are matched relative to the piano's measured A.
 - **Reward sounds** are pitched above the detector's range and only play while the app isn't listening.
 

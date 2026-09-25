@@ -17,6 +17,18 @@ export interface LessonDef {
   intervals?: IntervalSpec;
   // A mini-lesson that explains a concept (see guides.ts) instead of a practice lesson.
   guide?: string;
+  // Chord lessons: read and play three-note chords, named by their bottom note.
+  chords?: ChordSpec;
+}
+
+export interface ChordSpec {
+  // The chords in play, by their bottom note (e.g. "treble:C4" for C E G). The lesson's pool is the
+  // same list.
+  roots: ItemId[];
+  // Chords introduced here (they get a "meet" card first).
+  newRoots: ItemId[];
+  // Name them in full, "C major" or "A minor", rather than just "C".
+  quality: boolean;
 }
 
 export interface IntervalSpec {
@@ -76,6 +88,37 @@ export function intervalExample(size: number, clef: Clef): [ItemId, ItemId] {
   return [a, shiftItem(a, size - 1)];
 }
 
+// Chords: three notes stacked a skip apart (all on lines, or all in spaces), named by the bottom one.
+// Chord stats are kept as "chord:treble:C4".
+export const chordItem = (root: ItemId): ItemId => `chord:${root}`;
+export const isChordItem = (id: ItemId): boolean => id.startsWith('chord:');
+export const chordRoot = (id: ItemId): ItemId => id.slice('chord:'.length);
+
+export function triad(root: ItemId): ItemId[] {
+  return [root, shiftItem(root, 2), shiftItem(root, 4)];
+}
+
+// On the white keys, C, F and G chords are major (they sound bright); D, E and A chords are minor
+// (they sound sad). B's chord is neither, so the course leaves it out.
+const QUALITY: Record<string, 'major' | 'minor'> = { C: 'major', D: 'minor', E: 'minor', F: 'major', G: 'major', A: 'minor' };
+
+export const chordQuality = (root: ItemId): 'major' | 'minor' => QUALITY[itemLetter(root)];
+
+// "C", or "C major" in full.
+export function chordName(root: ItemId, full = false): string {
+  return full ? `${itemLetter(root)} ${chordQuality(root)}` : itemLetter(root);
+}
+
+// For sentences: "the C chord", or "C major".
+export function chordLabel(root: ItemId, full = false): string {
+  return full ? chordName(root, true) : `the ${itemLetter(root)} chord`;
+}
+
+export function chordTip(root: ItemId): string {
+  const [a, b, c] = triad(root).map(itemLetter);
+  return `The ${a} chord is ${a}, ${b} and ${c}: all ${isLine(root) ? 'on lines' : 'in spaces'}. Use fingers 1, 3 and 5.`;
+}
+
 export function itemClef(id: ItemId): Clef {
   return id.split(':')[0] as Clef;
 }
@@ -115,6 +158,10 @@ export const STAFF_NOTES: Record<Clef, ItemId[]> = {
 
 function intervalLesson(id: string, title: string, sizes: number[], newSizes: number[], clefs: Clef[]): LessonDef {
   return { id, title, pool: clefs.flatMap((c) => STAFF_NOTES[c]), newNotes: [], intervals: { sizes, newSizes, clefs } };
+}
+
+function chordLesson(id: string, title: string, roots: ItemId[], newRoots: ItemId[], quality = false): LessonDef {
+  return { id, title, pool: roots, newNotes: [], chords: { roots, newRoots, quality } };
 }
 
 function guideLesson(guideId: string): LessonDef {
@@ -209,7 +256,26 @@ export const UNITS: UnitDef[] = [
       { ...intervalLesson('intervals-check', 'Shape challenge', [2, 3, 4, 5, 8], [], ['treble', 'bass']), checkpoint: true },
     ], { 'intervals-1': 'intervals', 'intervals-2': 'skips', 'intervals-4': 'leaps', 'intervals-6': 'octaves' }),
   },
-  { id: 'triads', title: 'Chords', subtitle: 'Play three notes at once', color: '#8a8aa3', lessons: [], comingSoon: true },
+  {
+    id: 'chords',
+    title: 'Chords',
+    subtitle: 'Read and play three notes at once',
+    color: '#e0559a',
+    lessons: withGuides(
+      [
+        chordLesson('chords-1', 'C, F & G chords', t('C4', 'F4', 'G4'), t('C4', 'F4', 'G4')),
+        chordLesson('chords-2', 'D, E & A chords', t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), t('D4', 'E4', 'A4')),
+        chordLesson('chords-3', 'Left-hand chords', b('C3', 'F2', 'G2'), b('C3', 'F2', 'G2')),
+        chordLesson('chords-4', 'More left-hand chords', b('C3', 'D3', 'E3', 'F2', 'G2', 'A2'), b('D3', 'E3', 'A2')),
+        chordLesson('chords-5', 'Major or minor?', [...t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), ...b('C3', 'D3', 'E3', 'F2', 'G2', 'A2')], [], true),
+        {
+          ...chordLesson('chords-check', 'Chord challenge', [...t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), ...b('C3', 'D3', 'E3', 'F2', 'G2', 'A2')], [], true),
+          checkpoint: true,
+        },
+      ],
+      { 'chords-1': 'chords', 'chords-3': 'left-chords', 'chords-5': 'major-minor' },
+    ),
+  },
 ];
 
 // Landmarks get hand-written tips; every other note is described relative to the nearest landmark.

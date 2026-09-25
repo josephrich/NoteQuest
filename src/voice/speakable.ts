@@ -9,8 +9,11 @@ export function speakable(text: string): string {
   return (
     text
       .replace(/([A-G])♯/g, '$1 sharp')
-      // A lone capital B-G is a note name. So is A, except as the word "a" ("A step", "A 4th").
+      // A lone capital B-G is a note name. So is A, except as the word "a" ("A step", "A 4th"). After
+      // "the" or "and", or before "sits", "major" or "minor", it's the note ("the A chord", "A minor").
       .replace(/\b([B-G])\b/g, (_, l: string) => LETTER_SOUNDS[l])
+      .replace(/\b(the|The|and)\s+A\b/g, `$1 ${LETTER_SOUNDS.A}`)
+      .replace(/\bA(?=\s+(sits|major|minor)\b)/g, LETTER_SOUNDS.A)
       .replace(/\bA\b(?!\s+[a-z0-9])/g, LETTER_SOUNDS.A)
       .replace(/[·•]/g, ',')
       .replace(/[^\p{L}\p{N}\s.,!?'’:;-]/gu, ' ')

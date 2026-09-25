@@ -1,5 +1,6 @@
 // A small piano keyboard with some keys lit up, drawn under the staff so he can see which key a
-// written note is. Middle C always has a dot, as the landmark on the piano.
+// written note is. Middle C is always marked with a small grey "middle C" caption underneath, as the
+// landmark on the piano (in grey, not on the key, so it doesn't look like a key to play).
 import { LETTERS, parseNote, toMidi } from '../engine/music';
 
 const WHITE_W = 24;
@@ -33,7 +34,14 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
   });
   const lit = new Map(parsed.map((n, i) => [toMidi(n), i]));
   const width = whites.length * WHITE_W;
-  const hasLabels = labels?.some(Boolean);
+  const labelOf = (midi: number) => {
+    const idx = lit.get(midi);
+    return idx !== undefined ? labels?.[idx] : undefined;
+  };
+  const middleC = whites.findIndex((k) => k.midi === MIDDLE_C);
+  // Middle C gets a grey caption, unless labels on or next to it would collide with it.
+  const markC = middleC >= 0 && [middleC - 1, middleC, middleC + 1].every((i) => !whites[i] || !labelOf(whites[i].midi));
+  const hasLabels = labels?.some(Boolean) || markC;
   const height = WHITE_H + (hasLabels ? LABEL_H : 0) + 4;
 
   return (
@@ -48,7 +56,6 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
                 {LETTERS[k.letter]}
               </text>
             )}
-            {k.midi === MIDDLE_C && <circle cx={i * WHITE_W + WHITE_W / 2} cy={WHITE_H - (on ? 30 : 12)} r={4} fill={on ? '#fff' : '#f08c00'} />}
           </g>
         );
       })}
@@ -59,14 +66,18 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
       )}
       {hasLabels &&
         whites.map((k, i) => {
-          const idx = lit.get(k.midi);
-          const label = idx !== undefined ? labels?.[idx] : undefined;
+          const label = labelOf(k.midi);
           return label ? (
             <text key={`l${k.midi}`} x={i * WHITE_W + WHITE_W / 2} y={WHITE_H + 18} textAnchor="middle" fontSize={13} fontWeight={800} fill={color}>
               {label}
             </text>
           ) : null;
         })}
+      {markC && (
+        <text x={middleC * WHITE_W + WHITE_W / 2} y={WHITE_H + 18} textAnchor="middle" fontSize={11} fontWeight={700} fill="#9a93ad" aria-hidden="true">
+          middle C
+        </text>
+      )}
     </svg>
   );
 }

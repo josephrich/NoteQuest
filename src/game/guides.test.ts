@@ -4,7 +4,7 @@ import { LESSON_ORDER, UNITS, findLesson } from './content';
 import { finishLesson, initialProgress } from './progress';
 import { parseNote, toMidi } from '../engine/music';
 
-const pictureNotes = (p: Picture) => (p.clef === 'grand' ? [...p.treble, ...p.bass].filter((n): n is string => n !== null) : p.notes);
+const pictureNotes = (p: Picture) => (p.clef === 'grand' ? [...p.treble, ...p.bass].filter((n): n is string => n !== null) : p.notes.flatMap((n) => n.split(' ')));
 
 describe('guides', () => {
   test('every guide is on the path exactly once, and every guide node has content', () => {
@@ -22,6 +22,9 @@ describe('guides', () => {
     expect(before('ledger')).toBe('ledger-1');
     expect(before('intervals')).toBe('intervals-1');
     expect(before('octaves')).toBe('intervals-6');
+    expect(before('chords')).toBe('chords-1');
+    expect(before('left-chords')).toBe('chords-3');
+    expect(before('major-minor')).toBe('chords-5');
   });
 
   test('cards are well formed: quiz answers are options, notes parse and can be heard', () => {
@@ -41,6 +44,7 @@ describe('guides', () => {
         }
         // Show more, say less: every card is short enough to read (or hear) in one go.
         expect(card.text.split(/\s+/).length, card.text).toBeLessThanOrEqual(16);
+        if (card.kind !== 'play' && card.sound) for (const n of card.sound) expect(() => parseNote(n), n).not.toThrow();
         if (card.kind === 'play') {
           for (const n of card.play) {
             const m = toMidi(parseNote(n));

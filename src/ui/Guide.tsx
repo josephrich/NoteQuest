@@ -6,6 +6,7 @@ import { ModeBanner, type Mode } from './ModeBanner';
 import { GrandStaff, Staff } from './Staff';
 import { Keyboard } from './Keyboard';
 import { PlayKeyboard } from './PlayKeyboard';
+import { hearChord } from './pianoSound';
 import { SpeakButton } from './SpeakButton';
 import { quizWrongLine } from '../voice/lines';
 import { useProgress } from './store';
@@ -35,10 +36,11 @@ function PictureView({ picture, played = 0 }: { picture: Picture; played?: numbe
     const n = Math.max(picture.treble.length, picture.bass.length);
     return <GrandStaff treble={toNotes(picture.treble)} bass={toNotes(picture.bass)} labels={picture.labels} colors={colors(n)} label="Grand staff" />;
   }
+  // An entry can be a chord: its notes separated by spaces.
   return (
     <Staff
       clef={picture.clef}
-      groups={picture.notes.map((n) => [parseNote(n)])}
+      groups={picture.notes.map((n) => n.split(' ').map(parseNote))}
       labels={picture.labels}
       colors={colors(picture.notes.length)}
       label={picture.notes.join(', ')}
@@ -188,6 +190,11 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
             <PictureView picture={card.picture} played={card.kind === 'play' ? played : 0} />
             {card.kind !== 'play' && card.keys && <Keyboard notes={card.keys.notes} labels={card.keys.labels} />}
           </div>
+        )}
+        {card.kind !== 'play' && card.sound && (
+          <button className="btn btn-quiet hear-it" onClick={() => hearChord(card.sound!.map((n) => toMidi(parseNote(n))))}>
+            🔊 Hear it
+          </button>
         )}
 
         {card.kind === 'quiz' && (

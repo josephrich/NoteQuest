@@ -1,7 +1,7 @@
 // Daily Review: an endless, fresh practice lesson built from every note he has learned so far,
 // leaning on the notes he reads slowest or misses most. This is what keeps the app useful after
 // the course runs out.
-import { REVIEW_ID, isNoteItem, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
+import { REVIEW_ID, chordRoot, isChordItem, isNoteItem, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
 import { buildLesson, nameOptions, needWeight, tapped, type Challenge, type ItemStat } from './lesson';
 import { dayKey, type Progress } from './progress';
 
@@ -39,8 +39,9 @@ export function focusItems(stats: Record<ItemId, ItemStat>, n = FOCUS_COUNT): It
     .map((x) => x.id);
 }
 
-// "middle C", "treble G", "bass F" and so on, for showing to a child.
+// "middle C", "treble G", "bass F" and so on, for showing to a child; "the C chord" for a chord.
 export function friendlyName(id: ItemId): string {
+  if (isChordItem(id)) return `the ${itemLetter(chordRoot(id))} chord`;
   const n = itemNote(id);
   if (n.letter === 0 && n.octave === 4 && n.acc === 0) return 'middle C';
   return `${itemClef(id)} ${itemLetter(id)}`;

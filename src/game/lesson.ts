@@ -1,7 +1,19 @@
 // Builds a lesson's list of challenges, weighting practice towards the notes he reads slowest
 // or gets wrong most.
 import { LETTERS } from '../engine/music';
-import { STAFF_NOTES, intervalItem, intervalLabel, itemClef, itemLetter, shiftItem, intervalExample, type ItemId, type LessonDef } from './content';
+import {
+  STAFF_NOTES,
+  chordItem,
+  chordName,
+  intervalItem,
+  intervalLabel,
+  itemClef,
+  itemLetter,
+  shiftItem,
+  intervalExample,
+  type ItemId,
+  type LessonDef,
+} from './content';
 
 // 'interval' asks how far apart two notes are. Interval lessons also use 'meet' with two notes,
 // and 'burst' for playing a pair (with the first note named) or a short melody.
@@ -16,6 +28,11 @@ export interface Challenge {
   interval?: number;
   // For a pair to play: tell him the first note, so he reads the second one by its distance.
   startHint?: boolean;
+  // Chord lessons: each item is a chord's bottom note, and the chord is its three notes. 'name' asks
+  // which chord it is, 'play' asks for the chord, and 'burst' is a run of chords.
+  chord?: boolean;
+  // Chords are named in full ("C major") rather than by letter.
+  full?: boolean;
 }
 
 // Whether a challenge is answered by tapping or by playing.
@@ -23,7 +40,15 @@ export const tapped = (c: Challenge): boolean => c.kind === 'name' || c.kind ===
 
 // The right answer to tap, for 'name' and 'interval' challenges.
 export function challengeAnswer(c: Challenge): string {
+  if (c.chord) return chordName(c.items[0], c.full);
   return c.kind === 'interval' ? intervalLabel(c.interval!) : itemLetter(c.items[0]);
+}
+
+// What a challenge's stats are kept under, for its item at `step`.
+export function statItem(c: Challenge, step = 0): ItemId {
+  if (c.kind === 'interval') return intervalItem(c.interval!);
+  const id = c.items[Math.min(step, c.items.length - 1)];
+  return c.chord ? chordItem(id) : id;
 }
 
 export interface ItemStat {
@@ -94,6 +119,7 @@ export function buildLesson(
   { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
 ): Challenge[] {
   if (lesson.intervals) return buildIntervalLesson(lesson, stats, { mic, rnd, length });
+  if (lesson.chords) return buildChordLesson(lesson, stats, { mic, rnd, length });
   const out: Challenge[] = [];
   for (const id of lesson.newNotes) {
     if (!stats[id]?.seen) out.push({ kind: 'meet', items: [id] });
@@ -205,8 +231,66 @@ export function buildIntervalLesson(
   return out;
 }
 
+const LETTER_ORDER = 'CDEFGAB';
+const byLetter = (a: string, b: string) => LETTER_ORDER.indexOf(a[0]) - LETTER_ORDER.indexOf(b[0]) || a.localeCompare(b);
+
+// Choices for "Which chord is this?": the answer and up to three others from the lesson, in musical
+// order. Named in full, one of them is the same letter with the other quality ("C minor" for
+// "C major"), so it's the quality being read, not just the letter.
+export function chordOptions(root: ItemId, roots: ItemId[], full: boolean, rnd: Rnd): string[] {
+  const answer = chordName(root, full);
+  const others = [...new Set(roots.map((r) => chordName(r, full)))].filter((n) => n !== answer);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+  const picks = full ? [`${itemLetter(root)} ${answer.endsWith('major') ? 'minor' : 'major'}`, ...others.slice(0, 2)] : others.slice(0, 3);
+  return [answer, ...picks].sort(byLetter);
+}
+
+const CHORD_PATTERN = ['name', 'name', 'play', 'play', 'play', 'burst'] as const;
+const CHORD_CHECKPOINT_PATTERN = ['name', 'name', 'play', 'play', 'burst', 'burst'] as const;
+const CHORD_RUN = 3;
+
+export function buildChordLesson(
+  lesson: LessonDef,
+  stats: Record<ItemId, ItemStat>,
+  { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
+): Challenge[] {
+  const spec = lesson.chords!;
+  const full = spec.quality;
+  const out: Challenge[] = [];
+  for (const root of spec.newRoots) {
+    if (!stats[chordItem(root)]?.seen) out.push({ kind: 'meet', items: [root], chord: true, full });
+  }
+  const weights = spec.roots.map((r) => needWeight(stats[chordItem(r)], spec.newRoots.includes(r)));
+  const pickOne = (exclude: ItemId | null, clef?: string): ItemId => {
+    const inClef = spec.roots.filter((r) => !clef || itemClef(r) === clef);
+    const ids = inClef.length > 1 ? inClef.filter((r) => r !== exclude) : inClef;
+    return weightedPick(ids, ids.map((r) => weights[spec.roots.indexOf(r)]), rnd);
+  };
+  const count = length ?? (lesson.checkpoint ? 15 : 12);
+  const pattern = lesson.checkpoint ? CHORD_CHECKPOINT_PATTERN : CHORD_PATTERN;
+  let prev: ItemId | null = null;
+  for (let i = 0; i < count; i++) {
+    const kind = mic ? pattern[i % pattern.length] : 'name';
+    if (kind === 'burst') {
+      const items: ItemId[] = [pickOne(prev)];
+      while (items.length < CHORD_RUN) items.push(pickOne(items[items.length - 1], itemClef(items[0])));
+      out.push({ kind, items, chord: true, full });
+      prev = items[items.length - 1];
+      continue;
+    }
+    const root = pickOne(prev);
+    prev = root;
+    out.push(kind === 'name' ? { kind, items: [root], chord: true, full, options: chordOptions(root, spec.roots, full, rnd) } : { kind, items: [root], chord: true, full });
+  }
+  return out;
+}
+
 // For the lesson sheet: "D" for a note, or a word like "Skip" for an interval.
 export function describeNew(lesson: LessonDef): string[] {
   if (lesson.intervals) return lesson.intervals.newSizes.map(intervalLabel);
+  if (lesson.chords) return lesson.chords.newRoots.map((r) => chordName(r));
   return lesson.newNotes.map(itemLetter);
 }

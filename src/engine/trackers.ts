@@ -173,9 +173,26 @@ export class NoteTracker {
 export interface ChordEvent extends ChordCheck {
   onsetT: number;
   t: number;
+  // When the expected chord wasn't heard: the index of another chord (from the alternatives given
+  // to setTarget) that was played instead, if any.
+  matched: number | null;
+  // Not the chord, but it would be with one key moved by a semitone or two: one finger on the wrong
+  // key. (A note that's just missing isn't counted: he may still be putting the chord down one
+  // finger at a time.)
+  close: boolean;
 }
 
-// Averages spectra after an onset and checks them against the expected chord.
+// Checks what's sounding against the expected chord, from the average spectrum of the last few
+// frames (skipping each attack's first moments).
+//
+// An attempt starts with an attack. The chord passes as soon as it's heard. If it hasn't been heard
+// `giveUpMs` after the attempt started, one 'not it' event is sent, saying whether it was another
+// chord from the alternatives, or a near miss. After that it keeps listening quietly for the right
+// chord, since a chord put down one finger at a time often has no clear attack for its last note,
+// and a later attack starts a new attempt.
+//
+// Extra attacks inside an attempt (low chords beat, which can look like new attacks) only restart
+// the averaging, not the attempt.
 export class ChordTracker {
   refA4: number;
   private readonly sampleRate: number;
@@ -183,46 +200,98 @@ export class ChordTracker {
   private readonly startMs: number;
   private readonly decideAfterMs: number;
   private readonly giveUpMs: number;
+  private readonly windowFrames: number;
+  private readonly watchMs: number;
   private target: number[] = [];
-  private onsetT: number | null = null;
-  private done = true;
-  private acc = new Float64Array(0);
-  private count = 0;
+  private alternatives: number[][] = [];
+  // 'trying': an attempt is under way. 'watching': it failed; now only listening for a pass.
+  private state: 'idle' | 'trying' | 'watching' = 'idle';
+  private attemptT = 0;
+  private lastOnsetT = 0;
+  private recent: ArrayLike<number>[] = [];
+  // The last miss reported, so a ringing wrong chord isn't reported again (see update).
+  private lastMiss: { t: number; chroma: Float64Array } | null = null;
 
-  constructor({ refA4 = 440, sampleRate = 48000, fftSize = 8192, startMs = 40, decideAfterMs = 110, giveUpMs = 500 } = {}) {
+  constructor({ refA4 = 440, sampleRate = 48000, fftSize = 8192, startMs = 40, decideAfterMs = 110, giveUpMs = 600, windowFrames = 6, watchMs = 4000 } = {}) {
     this.refA4 = refA4;
     this.sampleRate = sampleRate;
     this.fftSize = fftSize;
     this.startMs = startMs;
     this.decideAfterMs = decideAfterMs;
     this.giveUpMs = giveUpMs;
+    this.windowFrames = windowFrames;
+    this.watchMs = watchMs;
   }
 
-  setTarget(midis: number[]): void {
+  setTarget(midis: number[], alternatives: number[][] = []): void {
     this.target = midis;
-    this.onsetT = null;
-    this.done = true;
+    this.alternatives = alternatives;
+    this.state = 'idle';
+    this.recent = [];
+    this.lastMiss = null;
   }
 
   update({ t, onset, mags }: { t: number; onset: boolean; mags: ArrayLike<number> }): ChordEvent | null {
     if (onset) {
-      this.onsetT = t;
-      this.done = false;
-      this.acc = new Float64Array(mags.length);
-      this.count = 0;
+      if (this.state !== 'trying') {
+        this.state = 'trying';
+        this.attemptT = t;
+      }
+      this.lastOnsetT = t;
+      this.recent = [];
     }
-    if (this.done || this.onsetT === null) return null;
-    const dt = t - this.onsetT;
-    if (dt < this.startMs) return null;
-    for (let i = 0; i < mags.length; i++) this.acc[i] += mags[i];
-    this.count++;
-    if (dt < this.decideAfterMs) return null;
-    const avg = this.acc.map((v) => v / this.count);
-    const res = verifyChord(avg, this.sampleRate, this.fftSize, this.target, { refA4: this.refA4 });
-    if (res.pass || dt >= this.giveUpMs) {
-      this.done = true;
-      return { ...res, onsetT: this.onsetT, t };
+    if (this.state === 'idle') return null;
+    if (this.state === 'watching' && t - this.lastOnsetT > this.watchMs) {
+      this.state = 'idle';
+      return null;
     }
-    return null;
+    if (t - this.lastOnsetT >= this.startMs) {
+      this.recent.push(Float64Array.from(mags));
+      if (this.recent.length > this.windowFrames) this.recent.shift();
+    }
+    if (!this.recent.length || t - this.attemptT < this.decideAfterMs) return null;
+    const avg = new Float64Array(this.recent[0].length);
+    for (const m of this.recent) for (let i = 0; i < avg.length; i++) avg[i] += m[i] / this.recent.length;
+    const check = (midis: number[]) => verifyChord(avg, this.sampleRate, this.fftSize, midis, { refA4: this.refA4 });
+    const res = check(this.target);
+    if (res.pass) {
+      this.state = 'idle';
+      this.lastMiss = null;
+      return { ...res, onsetT: this.attemptT, t, matched: null, close: false };
+    }
+    if (this.state === 'watching' || t - this.attemptT < this.giveUpMs) return null;
+    this.state = 'watching';
+    // Low chords beat as they ring, which can look like a new attack. If it still sounds like the
+    // miss just reported, it's the same wrong chord ringing on: don't report it twice.
+    const same = this.lastMiss !== null && t - this.lastMiss.t < this.watchMs && similarity(this.lastMiss.chroma, res.chroma) > 0.9;
+    this.lastMiss = { t, chroma: res.chroma };
+    if (same) return null;
+    const found = this.alternatives.findIndex((alt) => check(alt).pass);
+    const close = found < 0 && nearMisses(this.target).some((c) => check(c).pass);
+    return { ...res, onsetT: this.attemptT, t, matched: found >= 0 ? found : null, close };
   }
+}
+
+function similarity(a: Float64Array, b: Float64Array): number {
+  let ab = 0;
+  let aa = 0;
+  let bb = 0;
+  for (let i = 0; i < a.length; i++) {
+    ab += a[i] * b[i];
+    aa += a[i] * a[i];
+    bb += b[i] * b[i];
+  }
+  return aa && bb ? ab / Math.sqrt(aa * bb) : 0;
+}
+
+// The chord with one of its notes moved up or down by a semitone or two.
+function nearMisses(chord: number[]): number[][] {
+  const out: number[][] = [];
+  chord.forEach((m, i) => {
+    for (const d of [-2, -1, 1, 2]) {
+      const moved = m + d;
+      if (!chord.includes(moved)) out.push(chord.map((x, j) => (j === i ? moved : x)));
+    }
+  });
+  return out;
 }

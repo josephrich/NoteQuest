@@ -218,11 +218,15 @@ export function Home({ go }: { go: (s: Screen) => void }) {
               {selected.lesson.guide
                 ? `A quick mini-lesson: ${GUIDES[selected.lesson.guide].cards.length} short cards`
                 : describeNew(selected.lesson).length
-                ? `New ${selected.lesson.intervals ? 'jumps' : 'notes'}: ${describeNew(selected.lesson).join(', ')}`
+                ? `New ${selected.lesson.intervals ? 'jumps' : selected.lesson.chords ? 'chords' : 'notes'}: ${describeNew(selected.lesson).join(', ')}`
                 : selected.lesson.checkpoint
-                  ? 'Show what you know. Every note so far!'
+                  ? selected.lesson.chords
+                    ? 'Show what you know. Every chord so far!'
+                    : 'Show what you know. Every note so far!'
                   : selected.lesson.intervals
                     ? 'Practise reading the jumps between notes'
+                    : selected.lesson.chords
+                      ? 'Practise reading and playing chords'
                     : 'Practise the notes you know'}
             </p>
             <button className="btn btn-primary btn-big" disabled={starting} onClick={() => start(selected.lesson.id)}>
