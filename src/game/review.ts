@@ -1,8 +1,8 @@
 // Daily Review: an endless, fresh practice lesson built from every note he has learned so far,
 // leaning on the notes he reads slowest or misses most. This is what keeps the app useful after
 // the course runs out.
-import { REVIEW_ID, chordRoot, isChordItem, isNoteItem, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
-import { buildLesson, nameOptions, needWeight, tapped, type Challenge, type ItemStat } from './lesson';
+import { REVIEW_ID, chordRoot, isChordItem, isNoteItem, itemInterval, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
+import { MELODY_LENGTH, buildLesson, intervalMelody, nameOptions, needWeight, readingLevel, tapped, type Challenge, type ItemStat, type Level } from './lesson';
 import { dayKey, type Progress } from './progress';
 
 export { REVIEW_ID };
@@ -47,12 +47,59 @@ export function friendlyName(id: ItemId): string {
   return `${itemClef(id)} ${itemLetter(id)}`;
 }
 
-export function buildReview(stats: Record<ItemId, ItemStat>, { mic, rnd = Math.random }: { mic: boolean; rnd?: Rnd }): Challenge[] {
+// Chords he has practised, by bottom note.
+export function learnedChords(stats: Record<ItemId, ItemStat>): ItemId[] {
+  return Object.keys(stats)
+    .filter((id) => isChordItem(id) && stats[id].seen > 0)
+    .map(chordRoot);
+}
+
+// Jumps he has practised that can be played (not repeated notes).
+function learnedJumps(stats: Record<ItemId, ItemStat>): number[] {
+  return Object.keys(stats)
+    .map((id) => (stats[id].seen > 0 ? itemInterval(id) : null))
+    .filter((s): s is number => s !== null && s > 1);
+}
+
+const pick = <T>(arr: T[], rnd: Rnd): T => arr[Math.floor(rnd() * arr.length)];
+
+// The harder, multi-note challenges a review adds as he gets better: melodies built from the jumps
+// he knows, and chords once he has learned some. Only for playing, so only with a piano to play.
+export function advancedChallenges(stats: Record<ItemId, ItemStat>, level: Level, rnd: Rnd): Challenge[] {
+  const out: Challenge[] = [];
+  const jumps = learnedJumps(stats);
+  if (level >= 1 && jumps.length) {
+    for (let i = 0; i < level; i++) out.push({ kind: 'burst', items: intervalMelody(rnd() < 0.5 ? 'treble' : 'bass', jumps, MELODY_LENGTH[level], rnd) });
+  }
+  const chords = learnedChords(stats);
+  if (chords.length >= 2) {
+    out.push({ kind: 'play', items: [pick(chords, rnd)], chord: true });
+    const clef = itemClef(pick(chords, rnd));
+    const same = chords.filter((r) => itemClef(r) === clef);
+    if (level >= 2 && same.length >= 2) {
+      const items = [pick(same, rnd)];
+      while (items.length < 3) items.push(pick(same.filter((r) => r !== items[items.length - 1]), rnd));
+      out.push({ kind: 'burst', items, chord: true });
+    }
+  }
+  return out;
+}
+
+export function buildReview(stats: Record<ItemId, ItemStat>, { mic, rnd = Math.random, level }: { mic: boolean; rnd?: Rnd; level?: Level }): Challenge[] {
   const learned = learnedItems(stats);
   const focus = focusItems(stats);
   const extra = focus.length * FOCUS_REPEATS;
+  const lvl = level ?? readingLevel(stats);
+  // As he gets better, the review makes room for melodies and chords (only with a piano to play).
+  const harder = mic ? advancedChallenges(stats, lvl, rnd) : [];
   const lesson: LessonDef = { id: REVIEW_ID, title: REVIEW_TITLE, pool: learned, newNotes: [] };
-  const base = buildLesson(lesson, stats, { mic, rnd, length: REVIEW_LENGTH - extra });
+  const base = buildLesson(lesson, stats, { mic, rnd, length: REVIEW_LENGTH - extra - harder.length, level: lvl });
+  // Spread them through the playing parts of the review.
+  harder.forEach((c, i) => {
+    const plays = base.map((o, j) => (tapped(o) ? -1 : j)).filter((j) => j >= 0);
+    const at = plays.length ? plays[Math.floor(((i + 0.5) * plays.length) / harder.length)] + 1 : base.length;
+    base.splice(at, 0, c);
+  });
 
   // Each tricky note comes up twice: once as a quick read, once played (or tapped without a mic),
   // spread out through the review so it isn't just the same note back to back.

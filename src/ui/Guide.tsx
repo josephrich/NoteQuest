@@ -14,6 +14,7 @@ import { sfx } from './sound';
 import { praise } from './lines';
 import { GUIDES, type GuideCard, type Picture } from '../game/guides';
 import { findLesson } from '../game/content';
+import { HINT_AFTER } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { rollChest } from '../game/rewards';
 import { midiName, parseNote, toMidi } from '../engine/music';
@@ -111,17 +112,30 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
     go({ name: 'results', data });
   };
 
-  const next = () => {
+  // The furthest card reached. Going back to a question already answered shows it answered, so he
+  // can look again and move on without redoing it.
+  const furthest = useRef(0);
+
+  const goTo = (i: number) => {
     activeMs.current += Math.min(MAX_CARD_MS, performance.now() - shownAt.current);
-    if (last) return finish();
-    setIndex(index + 1);
+    const target = guide.cards[i];
+    const seen = i < furthest.current;
+    furthest.current = Math.max(furthest.current, i);
+    setIndex(i);
     setWrongTaps([]);
-    setPlayed(0);
+    setPlayed(seen && target.kind === 'play' ? target.play.length : 0);
     setMisses(0);
     setHeard(null);
-    setDone(false);
+    setDone(seen);
     shownAt.current = performance.now();
   };
+
+  const next = () => {
+    if (!last) return goTo(index + 1);
+    activeMs.current += Math.min(MAX_CARD_MS, performance.now() - shownAt.current);
+    finish();
+  };
+  const back = () => index > 0 && goTo(index - 1);
 
   // A note played on a play card, from the piano (via the microphone) or the on-screen keyboard.
   const hear = (midi: number) => {
@@ -243,7 +257,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
                 That was {heard}. Try again!
               </p>
             )}
-            {misses >= 2 && <p className="hint">Hint: it's {card.play[played].replace(/\d/, '')}</p>}
+            {misses >= HINT_AFTER && <p className="hint">Hint: it's {card.play[played].replace(/\d/, '')}</p>}
             <button className="btn btn-quiet" onClick={next}>
               {mic || onScreen ? 'Skip' : 'Next'}
             </button>
@@ -254,11 +268,18 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
           <PlayKeyboard clef={card.picture.clef === 'grand' ? 'treble' : card.picture.clef} disabled={done} onPress={hear} />
         )}
 
-        {card.kind === 'read' && (
-          <button className="btn btn-primary btn-big" onClick={next}>
-            {last ? 'Finish' : 'Next'}
-          </button>
-        )}
+        <div className="guide-nav">
+          {index > 0 && (
+            <button className="btn btn-secondary guide-back" onClick={back} aria-label="Back to the last card">
+              ‹ Back
+            </button>
+          )}
+          {card.kind === 'read' && (
+            <button className="btn btn-primary btn-big" onClick={next}>
+              {last ? 'Finish' : 'Next'}
+            </button>
+          )}
+        </div>
       </main>
 
       {card.kind !== 'read' && answered && (

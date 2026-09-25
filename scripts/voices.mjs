@@ -4,6 +4,8 @@
 //   npm run voices                 record new or changed lines only (asks for your OpenAI API key)
 //   npm run voices -- --force      re-record everything (e.g. after changing voice)
 //   npm run voices -- --dry-run    list what would be recorded, no key needed
+//   npm run voices -- --check      warn if any line has no recording, and offer to record them
+//                                  (runs as part of `npm run ios`)
 //
 // The key is typed in hidden, so it doesn't end up in your Terminal history. (Setting
 // OPENAI_API_KEY in the environment works too.)
@@ -25,6 +27,7 @@ const clipFile = (id) => join(outDir, `${id}.${EXT}`);
 const indexFile = join(root, 'src/voice/clips.json');
 const force = process.argv.includes('--force');
 const dryRun = process.argv.includes('--dry-run');
+const check = process.argv.includes('--check');
 let key = process.env.OPENAI_API_KEY;
 const voice = process.env.VOICE ?? 'coral';
 const model = process.env.VOICE_MODEL ?? 'gpt-4o-mini-tts';
@@ -58,6 +61,34 @@ console.log(`${clips.length} lines, ${todo.length} to record (${chars} character
 if (dryRun) {
   for (const c of todo) console.log(`  ${c.id}  ${c.input}`);
   process.exit(0);
+}
+
+// Asks a yes/no question; anything but "y" is no.
+function ask(question) {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(/^y/i.test(answer.trim()));
+    });
+  });
+}
+
+// Before a build: make sure new lines don't quietly ship with the device's robotic voice.
+if (check) {
+  if (!todo.length) {
+    console.log('✓ Every read-aloud line has a recording.');
+    process.exit(0);
+  }
+  const bar = '!'.repeat(72);
+  console.log(`\n${bar}\n  ${todo.length} read-aloud lines have NO recording, so the app will use the iPad's own voice for them:`);
+  for (const c of todo.slice(0, 8)) console.log(`    - ${c.text}`);
+  if (todo.length > 8) console.log(`    ...and ${todo.length - 8} more`);
+  console.log(`${bar}\n`);
+  if (!process.stdin.isTTY || !(await ask('Record them now with OpenAI? [y/N] '))) {
+    console.log('Carrying on without them. Run `npm run voices` any time to record them.\n');
+    process.exit(0);
+  }
 }
 // Asks for the key without echoing it to the screen.
 function askHidden(question) {
@@ -142,3 +173,4 @@ if (failure) {
   process.exit(1);
 }
 console.log(`Done. ${available.length} of ${clips.length} lines recorded${removed ? `, ${removed} old recordings removed` : ''}.`);
+if (done) console.log('Commit the new recordings so they stay with the app:  git add public/voice src/voice/clips.json && git commit -m "Record voice lines" && git push');

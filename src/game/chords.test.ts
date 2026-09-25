@@ -148,9 +148,9 @@ describe('playing a chord lesson', () => {
     expect(learnedItems({ 'chord:treble:C4': { seen: 1, correct: 1, wrong: 0, avgMs: 900, lastSeen: 0 } })).toEqual([]);
   });
 
-  test('three wrong chords reveal the answer; on screen it earns half', () => {
+  test('four wrong chords reveal the answer; on screen it earns half', () => {
     const run = new LessonRun('chords-1', [{ kind: 'play', items: ['treble:C4'], chord: true }], 0, seededRandom(1));
-    for (let i = 0; i < 3; i++) run.playChord({ correct: false, close: true }, 100 * (i + 1));
+    for (let i = 0; i < 4; i++) run.playChord({ correct: false, close: true }, 100 * (i + 1));
     expect(run.phase).toBe('reveal');
     const screen = new LessonRun('chords-1', [{ kind: 'play', items: ['treble:C4'], chord: true }], 0, seededRandom(1), true);
     expect(screen.playChord({ correct: true }, 500)?.xp).toBe(Math.ceil(XP.chord / 2));

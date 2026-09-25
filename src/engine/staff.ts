@@ -64,7 +64,8 @@ function finish(el: HTMLElement, width: number, height: number, label: string) {
 }
 
 export function renderStaff(el: HTMLElement, spec: StaffSpec): void {
-  const width = spec.groups.length === 1 ? 220 : 320;
+  // Longer runs get a wider stave, so the notes don't crowd together.
+  const width = spec.groups.length === 1 ? 220 : 320 + Math.max(0, spec.groups.length - 4) * 45;
   const height = spec.labels ? LABELLED_HEIGHT : HEIGHT;
   const ctx = setup(el, width, height);
   const stave = new Stave(8, 22, width - 16);

@@ -63,7 +63,7 @@ export function verifyChord(
   sampleRate: number,
   fftSize: number,
   expectedMidis: number[],
-  { refA4 = 440, maxHarmonic = 8, minExplained = 0.8, minPresence = 0.08 } = {},
+  { refA4 = 440, maxHarmonic = 8, minExplained = 0.8, minPresence = 0.08, minLowPresence = 0.03, maxBelow = 0.1, strict = true } = {},
 ): ChordCheck {
   const { peaks, max } = findPeaks(mags, sampleRate, fftSize);
   if (!peaks.length) {
@@ -90,20 +90,26 @@ export function verifyChord(
     else unexplained.push({ freq: p.freq, ratio: p.mag / max });
   }
 
-  // Presence: the fundamental must show up; for low notes (weak fundamentals) the 2nd partial also counts.
+  // Presence: each note's own fundamental must show up, so an inversion (the same letters with a
+  // different bottom note) doesn't pass. Low notes have weak fundamentals, so they need less.
+  // Not `strict` (for guessing what else he might have played): a low note's 2nd partial counts too.
   const presence = f0s.map((f0, i) => {
     let best = 0;
-    const harmonics = expectedMidis[i] < 48 ? [1, 2] : [1];
+    const harmonics = !strict && expectedMidis[i] < 48 ? [1, 2] : [1];
     for (const p of peaks) {
-      for (const h of harmonics) {
-        if (Math.abs(centsBetween(p.freq, h * f0)) <= 40) best = Math.max(best, p.mag / max);
-      }
+      for (const h of harmonics) if (Math.abs(centsBetween(p.freq, h * f0)) <= 40) best = Math.max(best, p.mag / max);
     }
     return best;
   });
+  const enough = (v: number, i: number) => v >= (strict && expectedMidis[i] < 48 ? minLowPresence : minPresence);
+
+  // Strict: nothing unexplained may sound below the bottom note. That's a different bottom note (an
+  // inversion, or an extra note underneath).
+  const bottom = Math.min(...f0s);
+  const below = strict && unexplained.some((u) => u.freq < bottom * 0.97 && u.ratio >= maxBelow);
 
   const explained = totalPower > 0 ? explainedPower / totalPower : 0;
-  const pass = explained >= minExplained && presence.every((v) => v >= minPresence);
+  const pass = explained >= minExplained && presence.every(enough) && !below;
   unexplained.sort((a, b) => b.ratio - a.ratio);
   return { pass, explained, presence, unexplained: unexplained.slice(0, 4), chroma: chroma(peaks, refA4) };
 }

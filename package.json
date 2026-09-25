@@ -10,7 +10,7 @@
     "preview": "vite preview --host",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "ios": "node scripts/voices.mjs --check && npm run build && npx cap sync ios && npx cap open ios",
     "voices": "node scripts/voices.mjs"
   },
   "dependencies": {

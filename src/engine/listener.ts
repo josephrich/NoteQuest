@@ -135,6 +135,8 @@ export class Listener {
     const same = (a: number[]) => key(a) === key(midis);
     const pass = this.chordTarget !== null && same(this.chordTarget);
     const matched = this.chordAlternatives.findIndex(same);
+    const target = this.chordTarget ?? [];
+    const inverted = !pass && key(midis.map((m) => m % 12)) === key(target.map((m) => m % 12)) && Math.min(...midis) % 12 !== Math.min(...target) % 12;
     const ev: ChordEvent = {
       pass,
       explained: pass ? 1 : 0.5,
@@ -143,8 +145,9 @@ export class Listener {
       chroma: new Float64Array(12),
       onsetT: t,
       t,
-      matched: pass || matched < 0 ? null : matched,
-      close: !pass && matched < 0,
+      matched: pass || inverted || matched < 0 ? null : matched,
+      close: !pass && !inverted && matched < 0,
+      inverted,
     };
     this.chordSubs.forEach((fn) => fn(ev));
   }

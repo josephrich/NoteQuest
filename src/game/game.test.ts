@@ -119,11 +119,13 @@ describe('a lesson in progress', () => {
     expect(run.accuracy).toBe(0);
   });
 
-  test('after three misses the answer is revealed', () => {
+  test('after four misses the answer is revealed', () => {
     const run = new LessonRun('x', [play('treble:C5'), play('treble:C5')], 0);
     run.play(60, 100);
     run.play(62, 200);
     run.play(64, 300);
+    expect(run.phase).toBe('asking');
+    run.play(65, 350);
     expect(run.phase).toBe('reveal');
     expect(run.next(400)).toBe(true);
     expect(run.phase).toBe('asking');

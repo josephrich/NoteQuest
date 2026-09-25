@@ -11,6 +11,7 @@ import {
   itemLetter,
   shiftItem,
   intervalExample,
+  isNoteItem,
   type ItemId,
   type LessonDef,
 } from './content';
@@ -108,24 +109,60 @@ export function nameOptions(id: ItemId, rnd: Rnd): string[] {
   return [answer, ...others.slice(0, 3)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 }
 
-// Tapping and playing come in blocks rather than alternating, so he isn't switching modes every
-// question.
-const PATTERN: ChallengeKind[] = ['name', 'name', 'play', 'play', 'play', 'burst'];
-const CHECKPOINT_PATTERN: ChallengeKind[] = ['name', 'name', 'play', 'play', 'burst', 'burst'];
+// How well he reads so far, from how many notes he reads quickly and accurately: 0 is starting out,
+// 1 is getting there, 2 is confident. As it goes up, lessons have more runs of notes (not just single
+// notes), and longer ones.
+export type Level = 0 | 1 | 2;
+export const LEVEL_AT = { 1: 8, 2: 18 } as const;
 
-export function buildLesson(
-  lesson: LessonDef,
-  stats: Record<ItemId, ItemStat>,
-  { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
-): Challenge[] {
-  if (lesson.intervals) return buildIntervalLesson(lesson, stats, { mic, rnd, length });
+export function isFluent(s: ItemStat): boolean {
+  return s.correct >= 6 && s.avgMs !== null && s.avgMs <= 2000 && s.wrong <= 0.2 * s.seen;
+}
+
+export function readingLevel(stats: Record<ItemId, ItemStat>): Level {
+  const fluent = Object.entries(stats).filter(([id, s]) => isNoteItem(id) && isFluent(s)).length;
+  return fluent >= LEVEL_AT[2] ? 2 : fluent >= LEVEL_AT[1] ? 1 : 0;
+}
+
+// Tapping and playing come in blocks rather than alternating, so he isn't switching modes every
+// question. By level: how often a run of notes ('burst') comes up, and how long it is.
+const PATTERNS: Record<Level, ChallengeKind[]> = {
+  0: ['name', 'name', 'play', 'play', 'play', 'burst'],
+  1: ['name', 'name', 'play', 'burst', 'play', 'burst'],
+  2: ['name', 'name', 'burst', 'play', 'burst', 'burst'],
+};
+const CHECKPOINT_PATTERNS: Record<Level, ChallengeKind[]> = {
+  0: ['name', 'name', 'play', 'play', 'burst', 'burst'],
+  1: ['name', 'name', 'play', 'burst', 'burst', 'burst'],
+  2: ['name', 'burst', 'burst', 'play', 'burst', 'burst'],
+};
+export const RUN_LENGTH: Record<Level, number> = { 0: 3, 1: 4, 2: 5 };
+
+// A lesson with notes he hasn't met yet stays a little gentler.
+function lessonLevel(lesson: LessonDef, stats: Record<ItemId, ItemStat>, level: Level | undefined): Level {
+  const l = level ?? readingLevel(stats);
+  return lesson.newNotes.some((id) => !stats[id]?.seen) ? (Math.min(l, 1) as Level) : l;
+}
+
+export interface BuildOptions {
+  mic: boolean;
+  rnd?: Rnd;
+  length?: number;
+  // Defaults to readingLevel(stats).
+  level?: Level;
+}
+
+export function buildLesson(lesson: LessonDef, stats: Record<ItemId, ItemStat>, { mic, rnd = Math.random, length, level }: BuildOptions): Challenge[] {
+  if (lesson.intervals) return buildIntervalLesson(lesson, stats, { mic, rnd, length, level });
   if (lesson.chords) return buildChordLesson(lesson, stats, { mic, rnd, length });
+  const lvl = lessonLevel(lesson, stats, level);
   const out: Challenge[] = [];
   for (const id of lesson.newNotes) {
     if (!stats[id]?.seen) out.push({ kind: 'meet', items: [id] });
   }
   const count = length ?? (lesson.checkpoint ? 15 : 12);
-  const pattern = lesson.checkpoint ? CHECKPOINT_PATTERN : PATTERN;
+  const pattern = (lesson.checkpoint ? CHECKPOINT_PATTERNS : PATTERNS)[lvl];
+  const runLength = RUN_LENGTH[lvl];
   const weights = lesson.pool.map((id) => needWeight(stats[id], lesson.newNotes.includes(id)));
   let prev: ItemId | null = null;
   const pickOne = (exclude: ItemId | null, clef?: string): ItemId => {
@@ -141,9 +178,9 @@ export function buildLesson(
     if (kind === 'burst') {
       const first = pickOne(prev);
       const items = [first];
-      while (items.length < 3) items.push(pickOne(items[items.length - 1], itemClef(first)));
+      while (items.length < runLength) items.push(pickOne(items[items.length - 1], itemClef(first)));
       out.push({ kind, items });
-      prev = items[2];
+      prev = items[items.length - 1];
     } else {
       const id = pickOne(prev);
       out.push(kind === 'name' ? { kind, items: [id], options: nameOptions(id, rnd) } : { kind, items: [id] });
@@ -153,8 +190,13 @@ export function buildLesson(
   return out;
 }
 
-const INTERVAL_PATTERN = ['interval', 'interval', 'interval', 'pair', 'pair', 'melody'] as const;
-const MELODY_LENGTH = 4;
+type IntervalKind = 'interval' | 'pair' | 'melody';
+const INTERVAL_PATTERNS: Record<Level, IntervalKind[]> = {
+  0: ['interval', 'interval', 'interval', 'pair', 'pair', 'melody'],
+  1: ['interval', 'interval', 'pair', 'melody', 'pair', 'melody'],
+  2: ['interval', 'interval', 'melody', 'pair', 'melody', 'melody'],
+};
+export const MELODY_LENGTH: Record<Level, number> = { 0: 4, 1: 5, 2: 6 };
 
 // A note `size` apart from `from`, up or down, that stays on the staff; null if neither fits.
 function jump(from: ItemId, size: number, rnd: Rnd): ItemId | null {
@@ -169,6 +211,18 @@ function jump(from: ItemId, size: number, rnd: Rnd): ItemId | null {
 
 function pickFrom<T>(arr: readonly T[], rnd: Rnd): T {
   return arr[Math.floor(rnd() * arr.length)];
+}
+
+// A short melody on the staff, each jump one of `sizes` (all bigger than 1).
+export function intervalMelody(clef: 'treble' | 'bass', sizes: number[], length: number, rnd: Rnd, pickSize: (sizes: number[]) => number = (s) => pickFrom(s, rnd)): ItemId[] {
+  let items = [pickFrom(STAFF_NOTES[clef], rnd)];
+  for (let tries = 0; items.length < length; tries++) {
+    const next = jump(items[items.length - 1], pickSize(sizes), rnd);
+    if (next) items.push(next);
+    // A big leap can paint it into a corner; start again from a fresh note.
+    else if (tries % 10 === 9) items = [pickFrom(STAFF_NOTES[clef], rnd)];
+  }
+  return items;
 }
 
 // Two notes a given interval apart, anywhere on the staff.
@@ -188,9 +242,12 @@ export function intervalOptions(sizes: number[]): string[] {
 export function buildIntervalLesson(
   lesson: LessonDef,
   stats: Record<ItemId, ItemStat>,
-  { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
+  { mic, rnd = Math.random, length, level }: BuildOptions,
 ): Challenge[] {
   const spec = lesson.intervals!;
+  // New jumps he hasn't met yet keep the lesson gentler.
+  const base = level ?? readingLevel(stats);
+  const lvl = (spec.newSizes.some((sz) => !stats[intervalItem(sz)]?.seen) ? Math.min(base, 1) : base) as Level;
   const options = intervalOptions(spec.sizes);
   const out: Challenge[] = [];
   for (const size of spec.newSizes) {
@@ -207,17 +264,11 @@ export function buildIntervalLesson(
   const count = length ?? (lesson.checkpoint ? 15 : 12);
   let prevSize: number | null = null;
   for (let i = 0; i < count; i++) {
-    const kind = mic ? INTERVAL_PATTERN[i % INTERVAL_PATTERN.length] : 'interval';
+    const pattern = INTERVAL_PATTERNS[lvl];
+    const kind = mic ? pattern[i % pattern.length] : 'interval';
     const clef = pickFrom(spec.clefs, rnd);
     if (kind === 'melody') {
-      let items = [pickFrom(STAFF_NOTES[clef], rnd)];
-      for (let tries = 0; items.length < MELODY_LENGTH; tries++) {
-        const next = jump(items[items.length - 1], pickSize(playable), rnd);
-        if (next) items.push(next);
-        // A big leap can paint it into a corner; start again from a fresh note.
-        else if (tries % 10 === 9) items = [pickFrom(STAFF_NOTES[clef], rnd)];
-      }
-      out.push({ kind: 'burst', items });
+      out.push({ kind: 'burst', items: intervalMelody(clef, playable, MELODY_LENGTH[lvl], rnd, pickSize) });
       continue;
     }
     // Avoid asking the same interval twice in a row when there is a choice.

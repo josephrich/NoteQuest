@@ -34,12 +34,22 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   after a mini-lesson with 🔊 Hear it buttons for hearing happy and sad chords. He names chords,
   plays them, and plays runs of three chords. If he plays a different chord from the lesson, it
   says which one ("That was the F chord"). With one finger on the wrong key it says "Close! One note
-  is off". On the on-screen piano he taps the three keys one at a time.
+  is off". Only the written position counts: an inversion (the same letters with a different
+  bottom note) is marked "Right notes, wrong order!". On the on-screen piano he taps the three keys
+  one at a time.
+- **Gets harder as he gets better**: a reading level goes up with the number of notes he reads
+  quickly and accurately (8 notes for level 1, 18 for level 2). As it rises, lessons have more runs
+  of notes and longer ones: runs of 3, then 4, then 5 notes, and interval melodies of 4, 5, then 6.
+  The Daily Review follows the same level and, once he knows them, mixes in interval melodies and
+  chords. Lessons that bring in notes he hasn't met yet stay a step gentler.
+- **Four tries**: a wrong note can be tried again. After 3 misses a hint appears; after 4 the answer
+  is shown and the lesson moves on.
 - **Mini-lessons** (📖 on the path): 14 short explainers placed just before the lessons that need
   them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
   spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, and chords. Each has a few cards
   with pictures on the staff, quick tap questions and "now play it" moments. Wrong answers just
-  explain and let him retry. The first read earns a chest; re-reading earns a little XP. Guides
+  explain and let him retry. A ‹ Back button returns to the previous card (questions already
+  answered stay answered). The first read earns a chest; re-reading earns a little XP. Guides
   never lock the path, so lessons he's already reached stay open.
 - **Show more, say less, and read aloud**: explainer and new-note cards show the matching keys lit
   up on a small piano keyboard under the staff (middle C is always marked with a small grey caption), and every card is one
@@ -125,7 +135,10 @@ use the deployed site or an https tunnel.
   synthetic tests, 0.5% of random speech passes this check, while every piano key does.
 - **Chords**: verified rather than transcribed (`src/engine/chord.ts`). Every expected note's
   fundamental must be present, and at least 80% of the spectral energy must be explained by the
-  harmonics of those notes. A chord that doesn't pass is checked against the lesson's other chords,
+  harmonics of those notes. Each note must be heard at its own pitch (not just through the note an
+  octave below it), and nothing unexplained may sound below the bottom note, so inversions don't
+  pass. The one voicing it can't tell apart is the right chord with its bottom note doubled an
+  octave up on top. A chord that doesn't pass is checked against the lesson's other chords,
   and against the chord with one note moved by a semitone or two. Only those count as wrong, so a
   missing note (fingers still going down) or talking is ignored. Each attempt is judged from a
   rolling average of the last few frames, so a chord put down one finger at a time still passes.
@@ -146,6 +159,7 @@ text-to-speech (about 130 short lines, costing a few cents):
 npm run voices                  # records new or changed lines; asks for your OpenAI API key (hidden)
 npm run voices -- --force       # re-record everything, e.g. with VOICE=nova npm run voices -- --force
 npm run voices -- --dry-run     # list what would be recorded
+npm run voices -- --check       # warn about unrecorded lines and offer to record them (part of npm run ios)
 ```
 
 Recordings go in `public/voice/` (MP3 audio named `.mpga`, which the iOS app serves reliably) and are listed in `src/voice/clips.json`; commit both. Editing a line

@@ -180,6 +180,8 @@ export interface ChordEvent extends ChordCheck {
   // key. (A note that's just missing isn't counted: he may still be putting the chord down one
   // finger at a time.)
   close: boolean;
+  // The right notes, but with a different note at the bottom: an inversion.
+  inverted: boolean;
 }
 
 // Checks what's sounding against the expected chord, from the average spectrum of the last few
@@ -257,18 +259,23 @@ export class ChordTracker {
     if (res.pass) {
       this.state = 'idle';
       this.lastMiss = null;
-      return { ...res, onsetT: this.attemptT, t, matched: null, close: false };
+      return { ...res, onsetT: this.attemptT, t, matched: null, close: false, inverted: false };
     }
-    if (this.state === 'watching' || t - this.attemptT < this.giveUpMs) return null;
+    // Only give up on a sound that has had time to settle since its latest attack.
+    if (this.state === 'watching' || t - this.attemptT < this.giveUpMs || t - this.lastOnsetT < this.decideAfterMs) return null;
     this.state = 'watching';
     // Low chords beat as they ring, which can look like a new attack. If it still sounds like the
     // miss just reported, it's the same wrong chord ringing on: don't report it twice.
     const same = this.lastMiss !== null && t - this.lastMiss.t < this.watchMs && similarity(this.lastMiss.chroma, res.chroma) > 0.9;
     this.lastMiss = { t, chroma: res.chroma };
     if (same) return null;
-    const found = this.alternatives.findIndex((alt) => check(alt).pass);
-    const close = found < 0 && nearMisses(this.target).some((c) => check(c).pass);
-    return { ...res, onsetT: this.attemptT, t, matched: found >= 0 ? found : null, close };
+    // What else it might be. Inversions are checked strictly (every note heard for itself); other
+    // chords and near misses more loosely, since they're only for saying what he played.
+    const inverted = inversions(this.target).some((c) => check(c).pass);
+    const loose = (midis: number[]) => verifyChord(avg, this.sampleRate, this.fftSize, midis, { refA4: this.refA4, strict: false }).pass;
+    const found = inverted ? -1 : this.alternatives.findIndex(loose);
+    const close = !inverted && found < 0 && nearMisses(this.target).some(loose);
+    return { ...res, onsetT: this.attemptT, t, matched: found >= 0 ? found : null, close, inverted };
   }
 }
 
@@ -282,6 +289,17 @@ function similarity(a: Float64Array, b: Float64Array): number {
     bb += b[i] * b[i];
   }
   return aa && bb ? ab / Math.sqrt(aa * bb) : 0;
+}
+
+// The same notes with a different one at the bottom: each inversion, in the octave above and below.
+function inversions(chord: number[]): number[][] {
+  const [a, b, c] = [...chord].sort((x, y) => x - y);
+  return [
+    [b, c, a + 12],
+    [c, a + 12, b + 12],
+    [c - 12, a, b],
+    [b - 12, c - 12, a],
+  ];
 }
 
 // The chord with one of its notes moved up or down by a semitone or two.

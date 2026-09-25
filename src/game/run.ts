@@ -9,7 +9,9 @@ import { rollChest } from './rewards';
 export const XP = { name: 1, play: 2, chord: 3, burstNote: 1, burstChord: 2, lightning: 1, comboBonus: 2, complete: 5, perfect: 5 } as const;
 // A reading faster than this earns a lightning bonus.
 export const LIGHTNING_MS = { name: 1500, interval: 2000, chordName: 2000, play: 2000, chord: 3000, burstNote: 1800, burstChord: 2500 } as const;
-const MAX_PLAY_TRIES = 3;
+// Wrong tries before the answer is shown; a hint appears one try before that.
+export const MAX_PLAY_TRIES = 4;
+export const HINT_AFTER = MAX_PLAY_TRIES - 1;
 const MAX_REQUEUES = 3;
 // Time counted towards the daily goal per challenge is capped, so wandering off doesn't count.
 const MAX_ACTIVE_MS = 30_000;
@@ -26,6 +28,8 @@ export interface Feedback {
   octaveSlip?: boolean;
   // A chord with one note wrong.
   close?: boolean;
+  // A chord with the right notes but the wrong one at the bottom (an inversion).
+  inverted?: boolean;
 }
 
 // What was heard (or pressed on screen) when a chord was asked for.
@@ -34,6 +38,7 @@ export interface ChordAttempt {
   // Another chord it was recognised as, e.g. "the F chord".
   heard?: string;
   close?: boolean;
+  inverted?: boolean;
 }
 
 export class LessonRun {
@@ -129,7 +134,7 @@ export class LessonRun {
     const c = this.current;
     if (!c.chord || c.kind === 'name') return null;
     if (c.kind === 'meet') return attempt.correct ? this.succeed(t, 0, false) : null;
-    const miss = { heard: attempt.heard, close: attempt.close };
+    const miss = { heard: attempt.heard, close: attempt.close, inverted: attempt.inverted };
     if (c.kind === 'play') return this.judgePlay(attempt.correct, miss, t);
     return this.judgeBurst(attempt.correct, miss, t);
   }

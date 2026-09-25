@@ -29,8 +29,8 @@ import {
   type ItemId,
 } from '../game/content';
 import { buildLesson, challengeAnswer, tapped as isTapChallenge, type Challenge, type ItemStat } from '../game/lesson';
-import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview } from '../game/review';
-import { LessonRun, type Feedback } from '../game/run';
+import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview, learnedChords } from '../game/review';
+import { HINT_AFTER, LessonRun, type Feedback } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { listener } from '../engine/listener';
 import type { Screen } from './App';
@@ -43,7 +43,7 @@ const IGNORE_BEFORE_MS = 150;
 // A course lesson, or the Daily Review built fresh from the notes he knows. `chords`: in a chord
 // lesson, every chord in it, so a wrong chord can be recognised as one of the others.
 function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boolean): { title: string; color: string; challenges: Challenge[]; chords: ItemId[] } {
-  if (lessonId === REVIEW_ID) return { title: REVIEW_TITLE, color: REVIEW_COLOR, challenges: buildReview(stats, { mic }), chords: [] };
+  if (lessonId === REVIEW_ID) return { title: REVIEW_TITLE, color: REVIEW_COLOR, challenges: buildReview(stats, { mic }), chords: learnedChords(stats) };
   const { unit, lesson } = findLesson(lessonId);
   return { title: lesson.title, color: unit.color, challenges: buildLesson(lesson, stats, { mic }), chords: lesson.chords?.roots ?? [] };
 }
@@ -154,8 +154,13 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       (ev) => {
         if (ev.onsetT < shownAt.current + IGNORE_BEFORE_MS) return;
         if (ev.pass) return react(run.playChord({ correct: true }, ev.onsetT));
-        if (ev.matched === null && !ev.close) return;
-        react(run.playChord({ correct: false, heard: ev.matched !== null ? chordLabel(others[ev.matched], c.full) : undefined, close: ev.close }, ev.onsetT));
+        if (ev.matched === null && !ev.close && !ev.inverted) return;
+        react(
+          run.playChord(
+            { correct: false, heard: ev.matched !== null ? chordLabel(others[ev.matched], c.full) : undefined, close: ev.close, inverted: ev.inverted },
+            ev.onsetT,
+          ),
+        );
       },
       others.map(chordMidis),
     );
@@ -171,9 +176,11 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
     const target = chordMidis(run.expected);
     const correct = sameKeys(keys, target);
     const other = correct ? undefined : setup.chords.find((r) => sameKeys(chordMidis(r), keys));
-    const close = !correct && !other && target.filter((m) => keys.includes(m)).length === 2;
+    const letters = (ms: number[]) => ms.map((m) => m % 12).sort((x, y) => x - y).join();
+    const inverted = !correct && letters(keys) === letters(target) && Math.min(...keys) % 12 !== Math.min(...target) % 12;
+    const close = !correct && !other && !inverted && target.filter((m) => keys.includes(m)).length === 2;
     window.setTimeout(() => setPicked([]), 450);
-    react(run.playChord({ correct, heard: other ? chordLabel(other, c.full) : undefined, close }, performance.now()));
+    react(run.playChord({ correct, heard: other ? chordLabel(other, c.full) : undefined, close, inverted }, performance.now()));
   };
 
   useEffect(() => {
@@ -321,11 +328,13 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
               <p className="try-again" role="status">
                 {wrong.octaveSlip
                   ? 'Right letter, wrong octave! Look where it sits.'
-                  : wrong.close
-                    ? 'Close! One note is off. Check all three.'
-                    : wrong.heard
-                      ? `That was ${wrong.heard}. ${c.chord ? 'Look at the bottom note.' : encourage()}`
-                      : `Not quite. ${encourage()}`}
+                  : wrong.inverted
+                    ? `Right notes, wrong order! ${n1} goes at the bottom.`
+                    : wrong.close
+                      ? 'Close! One note is off. Check all three.'
+                      : wrong.heard
+                        ? `That was ${wrong.heard}. ${c.chord ? 'Look at the bottom note.' : encourage()}`
+                        : `Not quite. ${encourage()}`}
               </p>
             )}
             {c.startHint && !wrong && (
@@ -333,7 +342,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
                 It starts on <strong>{itemLetter(c.items[0])}</strong>. Then read the jump!
               </p>
             )}
-            {c.kind !== 'meet' && run.tries >= 2 && <p className="hint">Hint: {hint}</p>}
+            {c.kind !== 'meet' && run.tries >= HINT_AFTER && <p className="hint">Hint: {hint}</p>}
             {c.chord && onScreen && !wrong && <p className="start-hint">Tap all three keys.</p>}
             {c.kind === 'meet' && (
               <button className="btn btn-secondary" onClick={() => react(run.tap(null, performance.now()))}>

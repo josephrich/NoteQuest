@@ -104,7 +104,7 @@ test('talking never passes, and is never mistaken for a wrong chord', () => {
     addVoice(sig, { f0, f1: f0 * 2 ** (((rnd() - 0.5) * 8) / 12), start: 0.3, duration: 0.15 + rnd() * 0.5, swell: 0.02 + rnd() * 0.15, vibratoCents: rnd() * 25, gain: 0.05 + rnd() * 0.3 });
     const expected = TREBLE[i % TREBLE.length];
     const others = TREBLE.filter((c) => c !== expected);
-    if (listen(sig, expected, others).some((e) => e.pass || e.close || e.matched !== null)) bad++;
+    if (listen(sig, expected, others).some((e) => e.pass || e.close || e.inverted || e.matched !== null)) bad++;
   }
   assert.ok(bad <= 2, `${bad} of 120 voices counted as a chord`);
 }, 60_000);
@@ -122,3 +122,22 @@ test('a wrong chord is reported once however long it rings, then fixing it passe
     assert.ok(evs[evs.length - 1].pass, `${name(expected)} not recognised after the miss`);
   }
 }, 60_000);
+
+test('inversions are not accepted: the bottom note has to be right too', () => {
+  for (const c of [...TREBLE, ...BASS]) {
+    const [a, b, d] = c;
+    const others = [...TREBLE, ...BASS].filter((x) => x !== c);
+    for (const inv of [
+      [b, d, a + 12],
+      [d, a + 12, b + 12],
+      [d - 12, a, b],
+      [b - 12, d - 12, a],
+    ].filter((v) => Math.min(...v) >= 38)) {
+      // (Only inversions within the course's range, D2 and up.)
+      const evs = listen(played(inv), c, others);
+      assert.ok(!evs.some((e) => e.pass), `${name(inv)} accepted as ${name(c)}`);
+      const last = evs[evs.length - 1];
+      assert.ok(last?.inverted, `${name(inv)} for ${name(c)} not reported as an inversion: ${JSON.stringify({ close: last?.close, matched: last?.matched })}`);
+    }
+  }
+}, 120_000);
