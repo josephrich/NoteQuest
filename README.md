@@ -13,8 +13,9 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
 
 ## What's in it (Phase 1)
 
-- **Onboarding**: the player's name and a name for their dragon (both kept on the device only),
-  plus a quick "play any note" mic check.
+- **Onboarding**: the player's name, their dragon's look (one of four starter colours and,
+  optionally, something to wear, both free and theirs in the shop), a name for the dragon (names
+  are kept on the device only), and a quick "play any note" mic check.
 - **Players**: everyone in the family can have their own player, each with its own dragon, streak,
   gems, prizes and progress. **Who's playing?** appears at launch when there's more than one player,
   and the 👤 button on the home screen switches player. Grown-ups can add and remove players. The

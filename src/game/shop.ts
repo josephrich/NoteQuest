@@ -71,6 +71,22 @@ export interface ShopState {
 
 export const initialShop = (): ShopState => ({ owned: ['green'], skin: 'green', outfit: {} });
 
+// When a player is set up, they pick one of these colours and (optionally) one of these to wear,
+// for free, so every player's dragon starts out different. The rest stay as shop rewards.
+export const STARTER_SKINS = ['green', 'blue', 'red', 'purple'];
+export const STARTER_ACCESSORIES = ['bowtie', 'party', 'glasses', 'scarf'];
+
+export function starterShop(skin: string, accessory: string | null): ShopState {
+  const shop = initialShop();
+  const pick = STARTER_SKINS.includes(skin) ? skin : 'green';
+  const item = accessory && STARTER_ACCESSORIES.includes(accessory) ? ACCESSORIES.find((a) => a.id === accessory) : undefined;
+  return {
+    owned: [...new Set([...shop.owned, pick, ...(item ? [item.id] : [])])],
+    skin: pick,
+    outfit: item ? { [item.slot]: item.id } : {},
+  };
+}
+
 // Ideas a grown-up can add with one tap.
 export const PRIZE_IDEAS: Omit<Prize, 'id'>[] = [
   { emoji: '🍕', name: 'Choose Friday dinner', cost: 500 },

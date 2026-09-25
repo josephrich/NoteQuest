@@ -112,3 +112,16 @@ describe('practice reminders', () => {
     expect(reminderText('Ember', 0).title).toContain('Ember');
   });
 });
+
+describe('starter dragon', () => {
+  test('the chosen colour and outfit are owned and worn from the start', async () => {
+    const { starterShop } = await import('./shop');
+    expect(starterShop('red', 'glasses')).toEqual({ owned: ['green', 'red', 'glasses'], skin: 'red', outfit: { face: 'glasses' } });
+    expect(starterShop('green', null)).toEqual({ owned: ['green'], skin: 'green', outfit: {} });
+  });
+
+  test("shop-only colours and outfits can't be picked for free", async () => {
+    const { starterShop } = await import('./shop');
+    expect(starterShop('gold', 'crown')).toEqual({ owned: ['green'], skin: 'green', outfit: {} });
+  });
+});
