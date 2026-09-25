@@ -3,11 +3,13 @@
 export type Clef = 'treble' | 'bass';
 export type Acc = -1 | 0 | 1;
 
-// A spelled note: letter index 0-6 (C..B), accidental, scientific octave.
+// A spelled note: letter index 0-6 (C..B), accidental, scientific octave. `natural`: a plain note
+// written with a natural sign (♮), cancelling an earlier sharp or flat.
 export interface Note {
   letter: number;
   octave: number;
   acc: Acc;
+  natural?: boolean;
 }
 
 export interface Target {
@@ -26,12 +28,18 @@ export function note(letter: number, octave: number, acc: Acc = 0): Note {
   return { letter, octave, acc };
 }
 
-// Parse "C4", "F#3", "Bb4".
+// Parse "C4", "F#3", "Bb4", or "Fn4" for F written with a natural sign.
 export function parseNote(s: string): Note {
-  const m = /^([A-G])([#b]?)(-?\d)$/.exec(s);
+  const m = /^([A-G])([#bn]?)(-?\d)$/.exec(s);
   if (!m) throw new Error(`bad note ${s}`);
   const acc: Acc = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
-  return note(LETTERS.indexOf(m[1] as (typeof LETTERS)[number]), Number(m[3]), acc);
+  const n = note(LETTERS.indexOf(m[1] as (typeof LETTERS)[number]), Number(m[3]), acc);
+  return m[2] === 'n' ? { ...n, natural: true } : n;
+}
+
+// "F♯", "B♭" or "F": a note's name without its octave.
+export function noteName(n: Note): string {
+  return LETTERS[n.letter] + (n.acc === 1 ? '♯' : n.acc === -1 ? '♭' : '');
 }
 
 export function toMidi(n: Note): number {

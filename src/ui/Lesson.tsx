@@ -4,24 +4,24 @@ import { Staff } from './Staff';
 import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
 import { Keyboard } from './Keyboard';
-import { PlayKeyboard } from './PlayKeyboard';
+import { PlayKeyboard, keyboardKeys } from './PlayKeyboard';
 import { SpeakButton } from './SpeakButton';
 import { PROMPTS } from '../voice/lines';
-import { spell } from '../engine/music';
+import { midiName, parseNote, spell, type Note } from '../engine/music';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
 import { hearChord } from './pianoSound';
 import {
   INTERVAL_TIPS,
-  chordLabel,
   chordName,
   chordTip,
   findLesson,
   intervalLabel,
   intervalWord,
   itemClef,
-  itemLetter,
+  itemName,
+  thirdQuality,
   itemMidi,
   itemNote,
   noteTip,
@@ -50,6 +50,20 @@ function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boo
 
 const chordMidis = (root: ItemId) => triad(root).map(itemMidi);
 const sameKeys = (a: number[], b: number[]) => a.length === b.length && a.every((m) => b.includes(m));
+
+// A wrong note is drawn faintly on the staff next to where it should be, if it's within reach of
+// the staff (the on-screen keyboard's range for that clef); otherwise he's told it was way off.
+const GHOST = 'rgba(120, 110, 140, 0.45)';
+// The wrong note, spelled the way the message names it ("That was B♭").
+function ghostNote(midi: number, name?: string): Note {
+  if (!name) return parseNote(midiName(midi));
+  return parseNote(`${name.replace('♯', '#').replace('♭', 'b')}${Math.floor(midi / 12) - 1}`);
+}
+
+function inReach(clef: 'treble' | 'bass', midi: number): boolean {
+  const keys = keyboardKeys(clef);
+  return midi >= keys[0].midi && midi <= keys[keys.length - 1].midi + 1;
+}
 
 // `onScreen`: notes are played on the on-screen piano rather than heard through the microphone.
 export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId: string; mic: boolean; onScreen?: boolean; go: (s: Screen) => void }) {
@@ -118,7 +132,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       const parts = [];
       if (fb.xp) parts.push(`+${fb.xp} XP`);
       if (fb.comboBonus) parts.push(`🔥 ${run.combo} in a row!`);
-      const met = c.chord ? chordLabel(c.items[0], c.full) : c.interval ? intervalWord(c.interval) : itemLetter(c.items[0]);
+      const met = c.chord ? chordName(c.items[0]) : c.interval ? intervalWord(c.interval) : itemName(c.items[0]);
       setMessage({ title: c.kind === 'meet' ? `That's ${met}!` : fb.lightning ? `⚡ ${lightningLine()}` : praise(), sub: parts.join(' · ') });
       advanceTimer.current = window.setTimeout(advance, 1100);
     } else if (!fb.correct) {
@@ -157,7 +171,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
         if (ev.matched === null && !ev.close && !ev.inverted) return;
         react(
           run.playChord(
-            { correct: false, heard: ev.matched !== null ? chordLabel(others[ev.matched], c.full) : undefined, close: ev.close, inverted: ev.inverted },
+            { correct: false, heard: ev.matched !== null ? chordName(others[ev.matched]) : undefined, close: ev.close, inverted: ev.inverted },
             ev.onsetT,
           ),
         );
@@ -180,7 +194,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
     const inverted = !correct && letters(keys) === letters(target) && Math.min(...keys) % 12 !== Math.min(...target) % 12;
     const close = !correct && !other && !inverted && target.filter((m) => keys.includes(m)).length === 2;
     window.setTimeout(() => setPicked([]), 450);
-    react(run.playChord({ correct, heard: other ? chordLabel(other, c.full) : undefined, close, inverted }, performance.now()));
+    react(run.playChord({ correct, heard: other ? chordName(other) : undefined, close, inverted }, performance.now()));
   };
 
   useEffect(() => {
@@ -218,7 +232,9 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       : c.kind === 'name'
         ? PROMPTS.name
         : c.kind === 'interval'
-          ? PROMPTS.interval
+          ? c.third
+            ? PROMPTS.third
+            : PROMPTS.interval
           : c.startHint
             ? PROMPTS.pair
             : c.kind === 'burst'
@@ -227,13 +243,42 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
   const wrong = run.feedback && !run.feedback.correct ? run.feedback : null;
   const tip = c.kind === 'meet' ? (c.chord ? chordTip(c.items[0]) : c.interval ? INTERVAL_TIPS[c.interval] : noteTip(c.items[0])) : '';
   // The note to play right now (for hints), and the full answer for tap challenges and reveals.
-  const answer = itemLetter(expected);
+  const answer = itemName(expected);
   const fullAnswer = tapToAnswer ? challengeAnswer(c) : answer;
-  // The answer in words: "C", "a skip", "the C chord" or "A minor".
-  const sayAnswer = c.chord ? chordLabel(expected, c.full) : c.kind === 'interval' ? intervalWord(c.interval!) : fullAnswer;
-  const [n1, n2, n3] = triad(expected).map(itemLetter);
+  // The answer in words: "C", "a skip", "D minor", or "a minor 3rd (D to F is 3 semitones)".
+  const semis = c.third ? itemMidi(c.items[1]) - itemMidi(c.items[0]) : 0;
+  const sayAnswer = c.chord
+    ? chordName(expected)
+    : c.third && c.kind === 'interval'
+      ? `a ${thirdQuality(c.items[0], c.items[1])} 3rd: ${itemName(c.items[0])} to ${itemName(c.items[1])} is ${semis} semitones`
+      : c.kind === 'interval'
+        ? intervalWord(c.interval!)
+        : fullAnswer;
+  const [n1, n2, n3] = c.chord ? triad(expected).map(itemName) : [];
   const hint = c.chord ? `${n1}, ${n2} and ${n3}` : `it's ${answer}`;
   const target = c.chord ? chordMidis(expected) : [];
+  // Where the wrong note he played sits, drawn faintly in the column of the note he's on.
+  const ghostMidi = !c.chord && wrong?.midi !== undefined && !wrong.revealed && (run.phase === 'asking' || run.phase === 'reveal') ? wrong.midi : undefined;
+  const ghostShown = ghostMidi !== undefined && inReach(clef, ghostMidi);
+  const ghosts = ghostShown ? c.items.map((_, i) => (i === Math.min(run.step, c.items.length - 1) ? ghostNote(ghostMidi, wrong!.heard) : undefined)) : undefined;
+  const direction = ghostMidi === undefined ? '' : ghostMidi < itemMidi(expected) ? 'higher' : 'lower';
+  const wrongLine = !wrong
+    ? ''
+    : wrong.revealed
+      ? `It's ${c.chord ? chordName(wrong.revealed) : itemName(wrong.revealed)}. Now the next one!`
+      : wrong.inverted
+        ? `Right notes, wrong order! ${n1} goes at the bottom.`
+        : wrong.close
+          ? 'Close! One note is off. Check all three.'
+          : c.chord
+            ? wrong.heard
+              ? `That was ${wrong.heard}. ${wrong.heard.split(' ')[0] === n1 ? 'Check the 3rd.' : 'Look at the bottom note.'}`
+              : `Not quite. ${encourage()}`
+            : ghostMidi !== undefined && !ghostShown
+              ? `That was way too ${direction === 'higher' ? 'low' : 'high'}! Look where the note sits.`
+              : wrong.octaveSlip
+                ? `Right letter, wrong octave! Go ${direction}.`
+                : `That was ${wrong.heard}${ghostShown ? ' (the grey note)' : ''}. Go ${direction}!`;
 
   return (
     <div className="lesson" data-mode={mode} style={{ ['--unit' as string]: setup.color }}>
@@ -266,9 +311,11 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             clef={clef}
             groups={c.items.map((id) => (c.chord ? triad(id) : [id]).map(itemNote))}
             colors={colors}
-            label={c.items.length > 1 ? `${c.items.length} ${c.chord ? 'chords' : 'notes'}` : c.chord ? `${chordName(expected)} chord` : `${answer}`}
+            ghosts={ghosts}
+            ghostColor={GHOST}
+            label={c.items.length > 1 ? `${c.items.length} ${c.chord ? 'chords' : 'notes'}` : c.chord ? chordName(expected) : `${answer}`}
           />
-          {c.kind === 'meet' && <div className="meet-name">{c.chord ? `${chordName(expected, c.full)} chord` : c.interval ? intervalLabel(c.interval) : answer}</div>}
+          {c.kind === 'meet' && <div className="meet-name">{c.chord ? chordName(expected) : c.interval ? intervalLabel(c.interval) : answer}</div>}
           {c.kind === 'meet' && <Keyboard notes={(c.chord ? triad(expected) : c.items).map((id) => spell(itemNote(id)))} />}
           {c.kind === 'meet' && c.chord && (
             <button className="btn btn-quiet hear-it" onClick={() => hearChord(target)}>
@@ -286,7 +333,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
         )}
 
         {tapToAnswer && (
-          <div className={`answers ${c.kind === 'interval' || c.full ? 'answers-words' : ''}`}>
+          <div className={`answers ${c.kind === 'interval' || c.chord ? 'answers-words' : ''}`}>
             {c.options!.map((o) => {
               const state =
                 run.phase === 'wrong' ? (o === fullAnswer ? 'right' : o === tapped ? 'wrong' : '') : run.phase === 'correct' && o === fullAnswer ? 'right' : '';
@@ -326,20 +373,12 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             ) : null}
             {wrong && (
               <p className="try-again" role="status">
-                {wrong.octaveSlip
-                  ? 'Right letter, wrong octave! Look where it sits.'
-                  : wrong.inverted
-                    ? `Right notes, wrong order! ${n1} goes at the bottom.`
-                    : wrong.close
-                      ? 'Close! One note is off. Check all three.'
-                      : wrong.heard
-                        ? `That was ${wrong.heard}. ${c.chord ? 'Look at the bottom note.' : encourage()}`
-                        : `Not quite. ${encourage()}`}
+                {wrongLine}
               </p>
             )}
             {c.startHint && !wrong && (
               <p className="start-hint">
-                It starts on <strong>{itemLetter(c.items[0])}</strong>. Then read the jump!
+                It starts on <strong>{itemName(c.items[0])}</strong>. {c.third ? 'Then find the 3rd!' : 'Then read the jump!'}
               </p>
             )}
             {c.kind !== 'meet' && run.tries >= HINT_AFTER && <p className="hint">Hint: {hint}</p>}

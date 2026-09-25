@@ -51,8 +51,16 @@ export function playPianoNote(midi: number): void {
 // Plays notes together, for "Hear it" buttons. The note listener is paused meanwhile, so the app
 // doesn't hear its own chord as him playing.
 export function hearChord(midis: number[]): void {
+  hearSequence([midis]);
+}
+
+// Plays each group of notes (a note or a chord) in turn, the first straight away.
+const GAP_MS = 1100;
+let playing: number[] = [];
+export function hearSequence(groups: number[][]): void {
   unlockSound();
+  playing.forEach((t) => window.clearTimeout(t));
   listener.hold();
-  midis.forEach(playPianoNote);
-  window.setTimeout(() => listener.release(), 1400);
+  playing = groups.map((g, i) => window.setTimeout(() => g.forEach(playPianoNote), i * GAP_MS));
+  playing.push(window.setTimeout(() => listener.release(), (groups.length - 1) * GAP_MS + 1400));
 }

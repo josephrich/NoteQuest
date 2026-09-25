@@ -6,7 +6,7 @@ import { ModeBanner, type Mode } from './ModeBanner';
 import { GrandStaff, Staff } from './Staff';
 import { Keyboard } from './Keyboard';
 import { PlayKeyboard } from './PlayKeyboard';
-import { hearChord } from './pianoSound';
+import { hearSequence } from './pianoSound';
 import { SpeakButton } from './SpeakButton';
 import { quizWrongLine } from '../voice/lines';
 import { useProgress } from './store';
@@ -17,7 +17,7 @@ import { findLesson } from '../game/content';
 import { HINT_AFTER } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { rollChest } from '../game/rewards';
-import { midiName, parseNote, toMidi } from '../engine/music';
+import { midiName, noteName, parseNote, toMidi } from '../engine/music';
 import { listener } from '../engine/listener';
 import type { Screen } from './App';
 import type { ResultsData } from './Results';
@@ -206,7 +206,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
           </div>
         )}
         {card.kind !== 'play' && card.sound && (
-          <button className="btn btn-quiet hear-it" onClick={() => hearChord(card.sound!.map((n) => toMidi(parseNote(n))))}>
+          <button className="btn btn-quiet hear-it" onClick={() => hearSequence(card.sound!.map((g) => g.split(' ').map((n) => toMidi(parseNote(n)))))}>
             🔊 Hear it
           </button>
         )}
@@ -257,7 +257,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
                 That was {heard}. Try again!
               </p>
             )}
-            {misses >= HINT_AFTER && <p className="hint">Hint: it's {card.play[played].replace(/\d/, '')}</p>}
+            {misses >= HINT_AFTER && <p className="hint">Hint: it's {noteName(parseNote(card.play[played]))}</p>}
             <button className="btn btn-quiet" onClick={next}>
               {mic || onScreen ? 'Skip' : 'Next'}
             </button>

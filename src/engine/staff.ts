@@ -11,6 +11,10 @@ export interface StaffSpec {
   colors?: (string | undefined)[];
   // Optional text under each group, e.g. a note name in an explainer.
   labels?: (string | undefined)[];
+  // Optional extra note drawn faintly in a group, e.g. the wrong note he played, to show where it
+  // sits compared with the right one.
+  ghosts?: (Note | undefined)[];
+  ghostColor?: string;
   label: string;
 }
 
@@ -29,13 +33,26 @@ export interface GrandSpec {
 const HEIGHT = 150;
 const LABELLED_HEIGHT = 180;
 
-function makeNote(clef: Clef, group: Note[], opts: { single: boolean; key?: KeyName; color?: string; label?: string; labelAbove?: boolean }) {
+function makeNote(
+  clef: Clef,
+  notes: Note[],
+  opts: { single: boolean; key?: KeyName; color?: string; label?: string; labelAbove?: boolean; ghost?: Note; ghostColor?: string },
+) {
+  // VexFlow wants a chord's notes from low to high; the ghost goes in with them.
+  const group = opts.ghost ? [...notes, opts.ghost].sort((a, b) => a.octave * 7 + a.letter - (b.octave * 7 + b.letter)) : notes;
   const n = new StaveNote({ clef, keys: group.map(vexKey), duration: opts.single ? 'w' : 'q', align_center: opts.single });
   // With a key signature showing, notes that follow it need no accidental.
   group.forEach((g, j) => {
     if (g.acc !== 0 && !opts.key) n.addModifier(new Accidental(g.acc === 1 ? '#' : 'b'), j);
+    else if (g.natural) n.addModifier(new Accidental('n'), j);
   });
   if (opts.color) n.setStyle({ fillStyle: opts.color, strokeStyle: opts.color });
+  if (opts.ghost) {
+    const style = { fillStyle: opts.ghostColor ?? '#aaa', strokeStyle: opts.ghostColor ?? '#aaa' };
+    n.setKeyStyle(group.indexOf(opts.ghost), style);
+    const acc = n.getModifiersByType('Accidental').find((m) => m.getIndex() === group.indexOf(opts.ghost!));
+    acc?.setStyle(style);
+  }
   if (opts.label) {
     const a = new Annotation(opts.label).setVerticalJustification(opts.labelAbove ? Annotation.VerticalJustify.TOP : Annotation.VerticalJustify.BOTTOM);
     a.setFont('Arial', 13, 'bold');
@@ -74,7 +91,9 @@ export function renderStaff(el: HTMLElement, spec: StaffSpec): void {
   stave.setContext(ctx).draw();
 
   const single = spec.groups.length === 1;
-  const notes = spec.groups.map((group, i) => makeNote(spec.clef, group, { single, key: spec.key, color: spec.colors?.[i], label: spec.labels?.[i] }));
+  const notes = spec.groups.map((group, i) =>
+    makeNote(spec.clef, group, { single, key: spec.key, color: spec.colors?.[i], label: spec.labels?.[i], ghost: spec.ghosts?.[i], ghostColor: spec.ghostColor }),
+  );
   const voice = new Voice({ num_beats: Math.max(1, notes.length), beat_value: 4 });
   voice.setMode(Voice.Mode.SOFT);
   voice.addTickables(notes);

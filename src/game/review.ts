@@ -1,7 +1,7 @@
 // Daily Review: an endless, fresh practice lesson built from every note he has learned so far,
 // leaning on the notes he reads slowest or misses most. This is what keeps the app useful after
 // the course runs out.
-import { REVIEW_ID, chordRoot, isChordItem, isNoteItem, itemInterval, itemClef, itemLetter, itemNote, type ItemId, type LessonDef } from './content';
+import { REVIEW_ID, chordName, chordRef, isChordItem, isNoteItem, itemInterval, itemClef, itemName, itemNote, type ItemId, type LessonDef } from './content';
 import { MELODY_LENGTH, buildLesson, intervalMelody, nameOptions, needWeight, readingLevel, tapped, type Challenge, type ItemStat, type Level } from './lesson';
 import { dayKey, type Progress } from './progress';
 
@@ -39,19 +39,19 @@ export function focusItems(stats: Record<ItemId, ItemStat>, n = FOCUS_COUNT): It
     .map((x) => x.id);
 }
 
-// "middle C", "treble G", "bass F" and so on, for showing to a child; "the C chord" for a chord.
+// "middle C", "treble G", "bass F♯" and so on, for showing to a child; "D minor" for a chord.
 export function friendlyName(id: ItemId): string {
-  if (isChordItem(id)) return `the ${itemLetter(chordRoot(id))} chord`;
+  if (isChordItem(id)) return chordName(chordRef(id));
   const n = itemNote(id);
   if (n.letter === 0 && n.octave === 4 && n.acc === 0) return 'middle C';
-  return `${itemClef(id)} ${itemLetter(id)}`;
+  return `${itemClef(id)} ${itemName(id)}`;
 }
 
 // Chords he has practised, by bottom note.
 export function learnedChords(stats: Record<ItemId, ItemStat>): ItemId[] {
   return Object.keys(stats)
     .filter((id) => isChordItem(id) && stats[id].seen > 0)
-    .map(chordRoot);
+    .map(chordRef);
 }
 
 // Jumps he has practised that can be played (not repeated notes).
@@ -107,7 +107,7 @@ export function buildReview(stats: Record<ItemId, ItemStat>, { mic, rnd = Math.r
   for (let r = 0; r < FOCUS_REPEATS; r++) {
     for (const id of focus) {
       const play = mic && r === 1;
-      focusChallenges.push(play ? { kind: 'play', items: [id] } : { kind: 'name', items: [id], options: nameOptions(id, rnd) });
+      focusChallenges.push(play ? { kind: 'play', items: [id] } : { kind: 'name', items: [id], options: nameOptions(id, rnd, learned) });
     }
   }
   // Slot each one in next to a challenge of the same kind (tap or play), so the review keeps its

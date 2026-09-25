@@ -23,8 +23,16 @@ describe('guides', () => {
     expect(before('intervals')).toBe('intervals-1');
     expect(before('octaves')).toBe('intervals-6');
     expect(before('chords')).toBe('chords-1');
-    expect(before('left-chords')).toBe('chords-3');
-    expect(before('major-minor')).toBe('chords-5');
+    expect(before('semitones')).toBe('guide-sharps');
+    expect(before('sharps')).toBe('acc-1');
+    expect(before('flats')).toBe('acc-2');
+    expect(before('naturals')).toBe('acc-3');
+    expect(before('thirds')).toBe('chords-2');
+    expect(before('major-minor')).toBe('chords-3');
+    expect(before('make-major')).toBe('chords-4');
+    expect(before('left-chords')).toBe('chords-5');
+    // Sharps and flats come before chords, which use them.
+    expect(LESSON_ORDER.indexOf('acc-check')).toBeLessThan(LESSON_ORDER.indexOf('guide-chords'));
   });
 
   test('cards are well formed: quiz answers are options, notes parse and can be heard', () => {
@@ -44,7 +52,7 @@ describe('guides', () => {
         }
         // Show more, say less: every card is short enough to read (or hear) in one go.
         expect(card.text.split(/\s+/).length, card.text).toBeLessThanOrEqual(16);
-        if (card.kind !== 'play' && card.sound) for (const n of card.sound) expect(() => parseNote(n), n).not.toThrow();
+        if (card.kind !== 'play' && card.sound) for (const n of card.sound.flatMap((g) => g.split(' '))) expect(() => parseNote(n), n).not.toThrow();
         if (card.kind === 'play') {
           for (const n of card.play) {
             const m = toMidi(parseNote(n));

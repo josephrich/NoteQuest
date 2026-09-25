@@ -6,7 +6,7 @@ import { readyPlayers } from '../game/players';
 import { listener } from '../engine/listener';
 import { freqToMidiFloat, midiName } from '../engine/music';
 import { dayKey, initialProgress } from '../game/progress';
-import { chordName, chordRoot, intervalLabel, isChordItem, itemClef, itemInterval, itemNote, type ItemId } from '../game/content';
+import { chordName, chordRef, intervalLabel, isChordItem, isNoteItem, itemClef, itemInterval, itemNote, thirdLabel, type ItemId } from '../game/content';
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
@@ -127,6 +127,8 @@ function ReadingSpeeds() {
   const rows = useMemo(
     () =>
       Object.entries(progress.items)
+        // (Stats saved in an older format, which the app no longer uses, are left out.)
+        .filter(([id]) => isNoteItem(id) || isChordItem(id) || itemInterval(id) !== null || id.startsWith('third:'))
         .map(([id, s]) => ({ id: id as ItemId, ...s, acc: s.seen ? s.correct / s.seen : 0 }))
         .sort((a, b) => (b.avgMs ?? 9e9) - (a.avgMs ?? 9e9)),
     [progress.items],
@@ -149,7 +151,11 @@ function ReadingSpeeds() {
               <td>
                 {isChordItem(r.id) ? (
                   <>
-                    {chordName(chordRoot(r.id))} chord <span className="muted">{itemClef(chordRoot(r.id))}</span>
+                    {chordName(chordRef(r.id))} <span className="muted">{itemClef(chordRef(r.id))} chord</span>
+                  </>
+                ) : r.id.startsWith('third:') ? (
+                  <>
+                    {thirdLabel(r.id.endsWith('major') ? 'major' : 'minor')} <span className="muted">interval</span>
                   </>
                 ) : itemInterval(r.id) !== null ? (
                   <>

@@ -227,6 +227,8 @@ export function Home({ go }: { go: (s: Screen) => void }) {
                     ? 'Practise reading the jumps between notes'
                     : selected.lesson.chords
                       ? 'Practise reading and playing chords'
+                      : selected.lesson.thirds
+                        ? 'Tell major 3rds from minor 3rds by counting semitones'
                     : 'Practise the notes you know'}
             </p>
             <button className="btn btn-primary btn-big" disabled={starting} onClick={() => start(selected.lesson.id)}>

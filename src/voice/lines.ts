@@ -16,6 +16,7 @@ export const PROMPTS = {
   chordName: 'Which chord is this?',
   chord: 'Play this chord',
   chordRun: 'Play these chords in order',
+  third: 'Major or minor 3rd?',
 } as const;
 
 // What a mini-lesson says after a wrong answer to one of its questions.

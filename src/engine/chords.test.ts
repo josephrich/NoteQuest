@@ -16,6 +16,9 @@ const TREBLE = [
   [65, 69, 72], // F
   [67, 71, 74], // G
   [69, 72, 76], // Am
+  [62, 66, 69], // D
+  [64, 68, 71], // E
+  [69, 73, 76], // A
 ];
 const BASS = TREBLE.map((c) => c.map((m) => m - 12)).concat([[43, 47, 50], [41, 45, 48], [45, 48, 52]].map((c) => c)); // plus G2, F2, A2 chords
 const name = (c: number[]) => c.map(midiName).join('-');
@@ -55,7 +58,7 @@ test('every chord in the unit is recognised, loud or soft', () => {
       assert.ok(evs.some((e) => e.pass), `${name(c)} at ${gain} not recognised`);
     }
   }
-});
+}, 60_000);
 
 test('playing a different chord from the lesson is recognised as that chord', () => {
   for (const pool of [TREBLE, BASS.slice(0, 6)]) {

@@ -16,3 +16,10 @@ test('A is read as a note in chord names, and as "a" when it is the word', () =>
   expect(speakable('A sits on the first little ledger line.')).toBe('ay sits on the first little ledger line.');
   expect(speakable('A chord is three notes played together.')).toBe('A chord is three notes played together.');
 });
+
+test('sharps and flats are read as words, and A as a note where it is one', () => {
+  expect(speakable('What is E♭?')).toBe('What is ee flat?');
+  expect(speakable('A sharp ♯ raises a note by one semitone.')).toBe('A sharp raises a note by one semitone.');
+  expect(speakable('One black key has two names: A sharp is also B flat.')).toBe('One black key has two names: ay sharp is also bee flat.');
+  expect(speakable('A minor is A, C and E. A to C is a minor 3rd: 3 semitones.')).toBe('ay minor is ay, see and ee. ay to see is a minor 3rd: 3 semitones.');
+});

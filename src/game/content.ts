@@ -1,6 +1,6 @@
 // The course: units of lessons, each introducing a few notes around "landmark" notes.
 // An item id is `<clef>:<note>`, e.g. "treble:G4", because the same pitch looks different in each clef.
-import { LETTERS, parseNote, toMidi, type Clef, type Note } from '../engine/music';
+import { LETTERS, noteName, parseNote, toMidi, type Clef, type Note } from '../engine/music';
 import { GUIDES } from './guides';
 
 export type ItemId = string;
@@ -17,18 +17,26 @@ export interface LessonDef {
   intervals?: IntervalSpec;
   // A mini-lesson that explains a concept (see guides.ts) instead of a practice lesson.
   guide?: string;
-  // Chord lessons: read and play three-note chords, named by their bottom note.
+  // Chord lessons: read and play three-note chords.
   chords?: ChordSpec;
+  // Major or minor 3rd? Read (and play) 3rds and tell them apart by size.
+  thirds?: ThirdsSpec;
 }
 
+// A chord, by its root (bottom note) and quality: "treble:D4:minor" is D F A, "treble:D4:major" is
+// D F♯ A.
+export type ChordRef = string;
+
 export interface ChordSpec {
-  // The chords in play, by their bottom note (e.g. "treble:C4" for C E G). The lesson's pool is the
-  // same list.
-  roots: ItemId[];
+  // The chords in play. The lesson's pool is their roots.
+  roots: ChordRef[];
   // Chords introduced here (they get a "meet" card first).
-  newRoots: ItemId[];
-  // Name them in full, "C major" or "A minor", rather than just "C".
-  quality: boolean;
+  newRoots: ChordRef[];
+}
+
+export interface ThirdsSpec {
+  // The 3rds in play, as [lower, upper] notes.
+  pairs: [ItemId, ItemId][];
 }
 
 export interface IntervalSpec {
@@ -75,8 +83,8 @@ export function shiftItem(id: ItemId, steps: number): ItemId {
 // How each interval looks, and an example pair to show when it is introduced.
 export const INTERVAL_TIPS: Record<number, string> = {
   1: 'Same place, same note. Play the key again.',
-  2: 'Line to the next space: a step. The very next key.',
-  3: 'Line to the next line: a skip. Jump over one key.',
+  2: 'Line to the next space: a step. The next white key.',
+  3: 'Line to the next line: a skip. Jump over one white key.',
   4: 'Line to space, two notes in between: a 4th.',
   5: 'Line to line, over one line: a 5th. Thumb to little finger!',
   8: 'The same letter, 8 notes away: an octave. Stretch!',
@@ -88,36 +96,51 @@ export function intervalExample(size: number, clef: Clef): [ItemId, ItemId] {
   return [a, shiftItem(a, size - 1)];
 }
 
-// Chords: three notes stacked a skip apart (all on lines, or all in spaces), named by the bottom one.
-// Chord stats are kept as "chord:treble:C4".
-export const chordItem = (root: ItemId): ItemId => `chord:${root}`;
-export const isChordItem = (id: ItemId): boolean => id.startsWith('chord:');
-export const chordRoot = (id: ItemId): ItemId => id.slice('chord:'.length);
+// Chords (triads): a root with a 3rd and a 5th stacked on it, all on lines or all in spaces. What
+// makes a chord major or minor is its 3rd: a major 3rd (4 semitones) sounds bright, a minor 3rd (3
+// semitones) sounds darker. The 5th is 7 semitones above the root either way.
+// Chord stats are kept as "chord:treble:D4:minor".
+export const chordItem = (ref: ChordRef): ItemId => `chord:${ref}`;
+export const isChordItem = (id: ItemId): boolean => id.startsWith('chord:') && id.split(':').length === 4;
+export const chordRef = (id: ItemId): ChordRef => id.slice('chord:'.length);
+export const chordRoot = (ref: ChordRef): ItemId => ref.split(':').slice(0, 2).join(':');
+export const chordQuality = (ref: ChordRef): 'major' | 'minor' => (ref.endsWith(':minor') ? 'minor' : 'major');
 
-export function triad(root: ItemId): ItemId[] {
-  return [root, shiftItem(root, 2), shiftItem(root, 4)];
+const SEMITONES = { third: { major: 4, minor: 3 }, fifth: 7 } as const;
+
+// The note `letters` letter names above `root`, spelled with whatever sharp or flat puts it exactly
+// `semitones` above.
+function spelledAbove(root: ItemId, letters: number, semitones: number): ItemId {
+  const plain = shiftItem(root, letters);
+  const acc = itemMidi(root) + semitones - itemMidi(plain);
+  const n = itemNote(plain);
+  return `${itemClef(root)}:${LETTERS[n.letter]}${acc === 1 ? '#' : acc === -1 ? 'b' : ''}${n.octave}`;
 }
 
-// On the white keys, C, F and G chords are major (they sound bright); D, E and A chords are minor
-// (they sound sad). B's chord is neither, so the course leaves it out.
-const QUALITY: Record<string, 'major' | 'minor'> = { C: 'major', D: 'minor', E: 'minor', F: 'major', G: 'major', A: 'minor' };
-
-export const chordQuality = (root: ItemId): 'major' | 'minor' => QUALITY[itemLetter(root)];
-
-// "C", or "C major" in full.
-export function chordName(root: ItemId, full = false): string {
-  return full ? `${itemLetter(root)} ${chordQuality(root)}` : itemLetter(root);
+export function triad(ref: ChordRef): ItemId[] {
+  const root = chordRoot(ref);
+  return [root, spelledAbove(root, 2, SEMITONES.third[chordQuality(ref)]), spelledAbove(root, 4, SEMITONES.fifth)];
 }
 
-// For sentences: "the C chord", or "C major".
-export function chordLabel(root: ItemId, full = false): string {
-  return full ? chordName(root, true) : `the ${itemLetter(root)} chord`;
+export const chordRefOf = (root: ItemId, quality: 'major' | 'minor'): ChordRef => `${root}:${quality}`;
+
+// "D minor".
+export function chordName(ref: ChordRef): string {
+  return `${itemName(chordRoot(ref))} ${chordQuality(ref)}`;
 }
 
-export function chordTip(root: ItemId): string {
-  const [a, b, c] = triad(root).map(itemLetter);
-  return `The ${a} chord is ${a}, ${b} and ${c}: all ${isLine(root) ? 'on lines' : 'in spaces'}. Use fingers 1, 3 and 5.`;
+export function chordTip(ref: ChordRef): string {
+  const [r, t] = triad(ref);
+  const [a, b, c] = triad(ref).map(itemName);
+  const q = chordQuality(ref);
+  const fingers = itemClef(r) === 'bass' ? 'Left hand: fingers 5, 3 and 1.' : 'Fingers 1, 3 and 5.';
+  return `${chordName(ref)} is ${a}, ${b} and ${c}. ${a} to ${itemName(t)} is a ${q} 3rd: ${SEMITONES.third[q]} semitones. ${fingers}`;
 }
+
+// 3rds: "Major 3rd" or "Minor 3rd", from how many semitones apart the notes are.
+export const thirdQuality = (lower: ItemId, upper: ItemId): 'major' | 'minor' => (itemMidi(upper) - itemMidi(lower) === 4 ? 'major' : 'minor');
+export const thirdLabel = (q: 'major' | 'minor'): string => (q === 'major' ? 'Major 3rd' : 'Minor 3rd');
+export const thirdItem = (q: 'major' | 'minor'): ItemId => `third:${q}`;
 
 export function itemClef(id: ItemId): Clef {
   return id.split(':')[0] as Clef;
@@ -130,6 +153,14 @@ export function itemNote(id: ItemId): Note {
 export function itemMidi(id: ItemId): number {
   return toMidi(itemNote(id));
 }
+
+// "F♯", "B♭", or plain "F" (also for a note written with a natural sign).
+export function itemName(id: ItemId): string {
+  return noteName(itemNote(id));
+}
+
+// The note's pitch without any natural sign, for keeping its stats: F♮ is just F.
+export const plainItem = (id: ItemId): ItemId => id.replace(/([A-G])n(-?\d)$/, '$1$2');
 
 export function itemLetter(id: ItemId): string {
   return LETTERS[itemNote(id).letter];
@@ -160,17 +191,25 @@ function intervalLesson(id: string, title: string, sizes: number[], newSizes: nu
   return { id, title, pool: clefs.flatMap((c) => STAFF_NOTES[c]), newNotes: [], intervals: { sizes, newSizes, clefs } };
 }
 
-function chordLesson(id: string, title: string, roots: ItemId[], newRoots: ItemId[], quality = false): LessonDef {
-  return { id, title, pool: roots, newNotes: [], chords: { roots, newRoots, quality } };
+function chordLesson(id: string, title: string, roots: ChordRef[], newRoots: ChordRef[]): LessonDef {
+  return { id, title, pool: [...new Set(roots.map(chordRoot))], newNotes: [], chords: { roots, newRoots } };
 }
+
+function thirdsLesson(id: string, title: string, pairs: [ItemId, ItemId][]): LessonDef {
+  return { id, title, pool: [...new Set(pairs.flat())], newNotes: [], thirds: { pairs } };
+}
+
+const maj = (...roots: ItemId[]) => roots.map((r) => chordRefOf(r, 'major'));
+const min = (...roots: ItemId[]) => roots.map((r) => chordRefOf(r, 'minor'));
+const pair = (clef: 'treble' | 'bass', a: string, b: string): [ItemId, ItemId] => [`${clef}:${a}`, `${clef}:${b}`];
 
 function guideLesson(guideId: string): LessonDef {
   return { id: `guide-${guideId}`, title: GUIDES[guideId].title, pool: [], newNotes: [], guide: guideId };
 }
 
-// Puts each guide just before the lesson that needs it.
-function withGuides(lessons: LessonDef[], before: Record<string, string>): LessonDef[] {
-  return lessons.flatMap((l) => (before[l.id] ? [guideLesson(before[l.id]), l] : [l]));
+// Puts each guide just before the lesson that needs it. `first` adds a second guide before that one.
+function withGuides(lessons: LessonDef[], before: Record<string, string>, first: Record<string, string> = {}): LessonDef[] {
+  return lessons.flatMap((l) => [...(first[l.id] ? [guideLesson(first[l.id])] : []), ...(before[l.id] ? [guideLesson(before[l.id])] : []), l]);
 }
 
 export const isGuide = (lesson: LessonDef): boolean => lesson.guide !== undefined;
@@ -257,23 +296,63 @@ export const UNITS: UnitDef[] = [
     ], { 'intervals-1': 'intervals', 'intervals-2': 'skips', 'intervals-4': 'leaps', 'intervals-6': 'octaves' }),
   },
   {
-    id: 'chords',
-    title: 'Chords',
-    subtitle: 'Read and play three notes at once',
-    color: '#e0559a',
+    id: 'accidentals',
+    title: 'Sharps, Flats & Naturals',
+    subtitle: 'Semitones, and the black keys',
+    color: '#20a4a8',
     lessons: withGuides(
       [
-        chordLesson('chords-1', 'C, F & G chords', t('C4', 'F4', 'G4'), t('C4', 'F4', 'G4')),
-        chordLesson('chords-2', 'D, E & A chords', t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), t('D4', 'E4', 'A4')),
-        chordLesson('chords-3', 'Left-hand chords', b('C3', 'F2', 'G2'), b('C3', 'F2', 'G2')),
-        chordLesson('chords-4', 'More left-hand chords', b('C3', 'D3', 'E3', 'F2', 'G2', 'A2'), b('D3', 'E3', 'A2')),
-        chordLesson('chords-5', 'Major or minor?', [...t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), ...b('C3', 'D3', 'E3', 'F2', 'G2', 'A2')], [], true),
+        { id: 'acc-1', title: 'Sharps: F♯ & C♯', pool: t('F4', 'F#4', 'C5', 'C#5', 'G4', 'D5'), newNotes: t('F#4', 'C#5') },
+        { id: 'acc-2', title: 'Flats: B♭ & E♭', pool: t('B4', 'Bb4', 'E5', 'Eb5', 'F#4', 'C#5'), newNotes: t('Bb4', 'Eb5') },
+        { id: 'acc-3', title: 'Naturals', pool: t('F#4', 'Fn4', 'Bb4', 'Bn4', 'C#5', 'Cn5', 'Eb5', 'En5'), newNotes: [] },
+        { id: 'acc-4', title: 'Sharps & flats in bass', pool: b('F3', 'F#3', 'C3', 'C#3', 'B2', 'Bb2', 'E3', 'Eb3'), newNotes: b('F#3', 'C#3', 'Bb2', 'Eb3') },
         {
-          ...chordLesson('chords-check', 'Chord challenge', [...t('C4', 'D4', 'E4', 'F4', 'G4', 'A4'), ...b('C3', 'D3', 'E3', 'F2', 'G2', 'A2')], [], true),
+          id: 'acc-check',
+          title: 'Sharps & flats challenge',
+          pool: [...t('F#4', 'C#5', 'Bb4', 'Eb5', 'Fn4', 'Bn4', 'G4', 'D5'), ...b('F#3', 'C#3', 'Bb2', 'Eb3', 'C3', 'E3')],
+          newNotes: [],
           checkpoint: true,
         },
       ],
-      { 'chords-1': 'chords', 'chords-3': 'left-chords', 'chords-5': 'major-minor' },
+      { 'acc-1': 'sharps', 'acc-2': 'flats', 'acc-3': 'naturals' },
+      { 'acc-1': 'semitones' },
+    ),
+  },
+  {
+    id: 'chords',
+    title: 'Chords',
+    subtitle: 'Major and minor chords, and what makes them sound that way',
+    color: '#e0559a',
+    lessons: withGuides(
+      [
+        chordLesson('chords-1', 'C, F & G major', maj(...t('C4', 'F4', 'G4')), maj(...t('C4', 'F4', 'G4'))),
+        thirdsLesson('chords-2', 'Major or minor 3rd?', [
+          pair('treble', 'C4', 'E4'),
+          pair('treble', 'D4', 'F4'),
+          pair('treble', 'E4', 'G4'),
+          pair('treble', 'F4', 'A4'),
+          pair('treble', 'G4', 'B4'),
+          pair('treble', 'A4', 'C5'),
+          pair('treble', 'B4', 'D5'),
+          pair('treble', 'D4', 'F#4'),
+          pair('treble', 'A4', 'C#5'),
+        ]),
+        chordLesson('chords-3', 'A, D & E minor', [...maj(...t('C4', 'F4', 'G4')), ...min(...t('A4', 'D4', 'E4'))], min(...t('A4', 'D4', 'E4'))),
+        chordLesson('chords-4', 'D, A & E major', [...min(...t('A4', 'D4', 'E4')), ...maj(...t('D4', 'A4', 'E4'))], maj(...t('D4', 'A4', 'E4'))),
+        chordLesson('chords-5', 'Left-hand major chords', maj(...b('C3', 'F2', 'G2')), maj(...b('C3', 'F2', 'G2'))),
+        chordLesson('chords-6', 'Left-hand minor chords', [...maj(...b('C3', 'F2', 'G2')), ...min(...b('A2', 'D3', 'E3'))], min(...b('A2', 'D3', 'E3'))),
+        chordLesson('chords-7', 'Major or minor?', [...maj(...t('C4', 'F4', 'G4', 'D4', 'A4')), ...min(...t('A4', 'D4', 'E4')), ...maj(...b('C3', 'F2', 'G2')), ...min(...b('A2', 'D3', 'E3'))], []),
+        {
+          ...chordLesson(
+            'chords-check',
+            'Chord challenge',
+            [...maj(...t('C4', 'F4', 'G4', 'D4', 'A4', 'E4')), ...min(...t('A4', 'D4', 'E4')), ...maj(...b('C3', 'F2', 'G2')), ...min(...b('A2', 'D3', 'E3'))],
+            [],
+          ),
+          checkpoint: true,
+        },
+      ],
+      { 'chords-1': 'chords', 'chords-2': 'thirds', 'chords-3': 'major-minor', 'chords-4': 'make-major', 'chords-5': 'left-chords' },
     ),
   },
 ];
@@ -324,6 +403,11 @@ function isLine(id: ItemId): boolean {
 }
 
 export function noteTip(id: ItemId): string {
+  const n = itemNote(id);
+  const letter = LETTERS[n.letter];
+  if (n.acc === 1) return `This is ${letter} sharp: ${letter} raised a semitone, to the key just right of ${letter}.`;
+  if (n.acc === -1) return `This is ${letter} flat: ${letter} lowered a semitone, to the key just left of ${letter}.`;
+  if (n.natural) return `The natural sign cancels a sharp or flat. This is plain ${letter}, a white key.`;
   if (LANDMARK_TIPS[id]) return LANDMARK_TIPS[id];
   if (LEDGER_TIPS[id]) return LEDGER_TIPS[id];
   const pos = staffPosition(itemNote(id));
@@ -334,7 +418,6 @@ export function noteTip(id: ItemId): string {
     const dist = pos - staffPosition(itemNote(lm));
     if (!best || Math.abs(dist) < Math.abs(best.dist)) best = { id: lm, dist };
   }
-  const letter = itemLetter(id);
   const where = isLine(id) ? 'on a line' : 'in a space';
   if (!best || best.dist === 0) return `This is ${letter}, ${where}.`;
   const lmName = LANDMARK_NAMES[best.id];

@@ -5,10 +5,20 @@ import {
   STAFF_NOTES,
   chordItem,
   chordName,
+  chordQuality,
+  chordRefOf,
+  chordRoot,
   intervalItem,
   intervalLabel,
   itemClef,
   itemLetter,
+  itemName,
+  itemNote,
+  plainItem,
+  thirdItem,
+  thirdLabel,
+  thirdQuality,
+  type ChordRef,
   shiftItem,
   intervalExample,
   isNoteItem,
@@ -29,11 +39,11 @@ export interface Challenge {
   interval?: number;
   // For a pair to play: tell him the first note, so he reads the second one by its distance.
   startHint?: boolean;
-  // Chord lessons: each item is a chord's bottom note, and the chord is its three notes. 'name' asks
-  // which chord it is, 'play' asks for the chord, and 'burst' is a run of chords.
+  // Chord lessons: each item is a chord (see ChordRef). 'name' asks which chord it is, 'play' asks
+  // for the chord, and 'burst' is a run of chords.
   chord?: boolean;
-  // Chords are named in full ("C major") rather than by letter.
-  full?: boolean;
+  // 3rds lessons: an 'interval' challenge asking major or minor 3rd, or a pair to play.
+  third?: boolean;
 }
 
 // Whether a challenge is answered by tapping or by playing.
@@ -41,15 +51,17 @@ export const tapped = (c: Challenge): boolean => c.kind === 'name' || c.kind ===
 
 // The right answer to tap, for 'name' and 'interval' challenges.
 export function challengeAnswer(c: Challenge): string {
-  if (c.chord) return chordName(c.items[0], c.full);
-  return c.kind === 'interval' ? intervalLabel(c.interval!) : itemLetter(c.items[0]);
+  if (c.chord) return chordName(c.items[0]);
+  if (c.third) return thirdLabel(thirdQuality(c.items[0], c.items[1]));
+  return c.kind === 'interval' ? intervalLabel(c.interval!) : itemName(c.items[0]);
 }
 
 // What a challenge's stats are kept under, for its item at `step`.
 export function statItem(c: Challenge, step = 0): ItemId {
+  if (c.third && c.kind === 'interval') return thirdItem(thirdQuality(c.items[0], c.items[1]));
   if (c.kind === 'interval') return intervalItem(c.interval!);
   const id = c.items[Math.min(step, c.items.length - 1)];
-  return c.chord ? chordItem(id) : id;
+  return c.chord ? chordItem(id) : plainItem(id);
 }
 
 export interface ItemStat {
@@ -97,16 +109,42 @@ function weightedPick(ids: ItemId[], weights: number[], rnd: Rnd): ItemId {
   return ids[ids.length - 1];
 }
 
-export function nameOptions(id: ItemId, rnd: Rnd): string[] {
-  const answer = itemLetter(id);
-  const others: string[] = LETTERS.filter((l) => l !== answer);
-  for (let i = others.length - 1; i > 0; i--) {
+function shuffle<T>(arr: T[], rnd: Rnd): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
-    [others[i], others[j]] = [others[j], others[i]];
+    [out[i], out[j]] = [out[j], out[i]];
   }
-  // Keep the buttons in musical order (C D E F G A B) so he isn't hunting for a letter.
-  const order: string[] = [...LETTERS];
-  return [answer, ...others.slice(0, 3)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return out;
+}
+
+// Musical order for note names: C, C♯, D♭, D... (flat before natural before sharp on each letter).
+const nameOrder = (name: string) => LETTERS.indexOf(name[0] as (typeof LETTERS)[number]) * 3 + (name.endsWith('♭') ? 0 : name.endsWith('♯') ? 2 : 1);
+
+// Choices for naming a note, in musical order (C D E F G A B) so he isn't hunting for a letter. When
+// the lesson has sharps or flats, the choices use them too, and always include the same letter
+// with and without its sharp or flat, so the sign is what's being read.
+export function nameOptions(id: ItemId, rnd: Rnd, pool: ItemId[] = []): string[] {
+  const answer = itemName(id);
+  const accidentals = [id, ...pool].some((p) => itemNote(p).acc !== 0 || itemNote(p).natural);
+  if (!accidentals) {
+    const others = shuffle(LETTERS.filter((l) => l !== answer), rnd);
+    return [answer, ...others.slice(0, 3)].sort((a, b) => nameOrder(a) - nameOrder(b));
+  }
+  const letter = itemLetter(id);
+  const names = [...new Set(pool.map(itemName))].filter((n) => n !== answer);
+  // The same letter plain, sharp or flat (leaving out E♯, B♯, C♭ and F♭, which are white keys).
+  const variants = [letter, 'EB'.includes(letter) ? null : `${letter}♯`, 'CF'.includes(letter) ? null : `${letter}♭`].filter((n): n is string => n !== null);
+  const inLesson = names.filter((n) => n[0] === letter);
+  const sameLetter = shuffle(
+    (inLesson.length ? [...new Set([letter, ...inLesson])] : variants).filter((n) => n !== answer),
+    rnd,
+  ).slice(0, 1);
+  const rest = shuffle(
+    [...names, ...LETTERS].filter((n, i, all) => n !== answer && !sameLetter.includes(n) && all.indexOf(n) === i),
+    rnd,
+  ).slice(0, 3 - sameLetter.length);
+  return [answer, ...sameLetter, ...rest].sort((a, b) => nameOrder(a) - nameOrder(b));
 }
 
 // How well he reads so far, from how many notes he reads quickly and accurately: 0 is starting out,
@@ -155,6 +193,7 @@ export interface BuildOptions {
 export function buildLesson(lesson: LessonDef, stats: Record<ItemId, ItemStat>, { mic, rnd = Math.random, length, level }: BuildOptions): Challenge[] {
   if (lesson.intervals) return buildIntervalLesson(lesson, stats, { mic, rnd, length, level });
   if (lesson.chords) return buildChordLesson(lesson, stats, { mic, rnd, length });
+  if (lesson.thirds) return buildThirdsLesson(lesson, stats, { mic, rnd, length });
   const lvl = lessonLevel(lesson, stats, level);
   const out: Challenge[] = [];
   for (const id of lesson.newNotes) {
@@ -163,7 +202,7 @@ export function buildLesson(lesson: LessonDef, stats: Record<ItemId, ItemStat>, 
   const count = length ?? (lesson.checkpoint ? 15 : 12);
   const pattern = (lesson.checkpoint ? CHECKPOINT_PATTERNS : PATTERNS)[lvl];
   const runLength = RUN_LENGTH[lvl];
-  const weights = lesson.pool.map((id) => needWeight(stats[id], lesson.newNotes.includes(id)));
+  const weights = lesson.pool.map((id) => needWeight(stats[plainItem(id)], lesson.newNotes.includes(id)));
   let prev: ItemId | null = null;
   const pickOne = (exclude: ItemId | null, clef?: string): ItemId => {
     const inClef = lesson.pool.filter((id) => !clef || itemClef(id) === clef);
@@ -183,7 +222,7 @@ export function buildLesson(lesson: LessonDef, stats: Record<ItemId, ItemStat>, 
       prev = items[items.length - 1];
     } else {
       const id = pickOne(prev);
-      out.push(kind === 'name' ? { kind, items: [id], options: nameOptions(id, rnd) } : { kind, items: [id] });
+      out.push(kind === 'name' ? { kind, items: [id], options: nameOptions(id, rnd, lesson.pool) } : { kind, items: [id] });
       prev = id;
     }
   }
@@ -282,21 +321,16 @@ export function buildIntervalLesson(
   return out;
 }
 
-const LETTER_ORDER = 'CDEFGAB';
-const byLetter = (a: string, b: string) => LETTER_ORDER.indexOf(a[0]) - LETTER_ORDER.indexOf(b[0]) || a.localeCompare(b);
-
-// Choices for "Which chord is this?": the answer and up to three others from the lesson, in musical
-// order. Named in full, one of them is the same letter with the other quality ("C minor" for
-// "C major"), so it's the quality being read, not just the letter.
-export function chordOptions(root: ItemId, roots: ItemId[], full: boolean, rnd: Rnd): string[] {
-  const answer = chordName(root, full);
-  const others = [...new Set(roots.map((r) => chordName(r, full)))].filter((n) => n !== answer);
-  for (let i = others.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [others[i], others[j]] = [others[j], others[i]];
-  }
-  const picks = full ? [`${itemLetter(root)} ${answer.endsWith('major') ? 'minor' : 'major'}`, ...others.slice(0, 2)] : others.slice(0, 3);
-  return [answer, ...picks].sort(byLetter);
+// Choices for "Which chord is this?": the answer, the same root with the other quality (so it's the
+// 3rd being read, not just the root), and two others from the lesson, in musical order.
+export function chordOptions(ref: ChordRef, refs: ChordRef[], rnd: Rnd): string[] {
+  const answer = chordName(ref);
+  const flipped = chordName(chordRefOf(chordRoot(ref), chordQuality(ref) === 'major' ? 'minor' : 'major'));
+  const others = shuffle(
+    [...new Set(refs.map(chordName))].filter((n) => n !== answer && n !== flipped),
+    rnd,
+  ).slice(0, 2);
+  return [answer, flipped, ...others].sort((a, b) => nameOrder(a.split(' ')[0]) - nameOrder(b.split(' ')[0]) || a.localeCompare(b));
 }
 
 const CHORD_PATTERN = ['name', 'name', 'play', 'play', 'play', 'burst'] as const;
@@ -309,32 +343,58 @@ export function buildChordLesson(
   { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
 ): Challenge[] {
   const spec = lesson.chords!;
-  const full = spec.quality;
   const out: Challenge[] = [];
-  for (const root of spec.newRoots) {
-    if (!stats[chordItem(root)]?.seen) out.push({ kind: 'meet', items: [root], chord: true, full });
+  for (const ref of spec.newRoots) {
+    if (!stats[chordItem(ref)]?.seen) out.push({ kind: 'meet', items: [ref], chord: true });
   }
   const weights = spec.roots.map((r) => needWeight(stats[chordItem(r)], spec.newRoots.includes(r)));
-  const pickOne = (exclude: ItemId | null, clef?: string): ItemId => {
+  const pickOne = (exclude: ChordRef | null, clef?: string): ChordRef => {
     const inClef = spec.roots.filter((r) => !clef || itemClef(r) === clef);
     const ids = inClef.length > 1 ? inClef.filter((r) => r !== exclude) : inClef;
     return weightedPick(ids, ids.map((r) => weights[spec.roots.indexOf(r)]), rnd);
   };
   const count = length ?? (lesson.checkpoint ? 15 : 12);
   const pattern = lesson.checkpoint ? CHORD_CHECKPOINT_PATTERN : CHORD_PATTERN;
-  let prev: ItemId | null = null;
+  let prev: ChordRef | null = null;
   for (let i = 0; i < count; i++) {
     const kind = mic ? pattern[i % pattern.length] : 'name';
     if (kind === 'burst') {
-      const items: ItemId[] = [pickOne(prev)];
+      const items: ChordRef[] = [pickOne(prev)];
       while (items.length < CHORD_RUN) items.push(pickOne(items[items.length - 1], itemClef(items[0])));
-      out.push({ kind, items, chord: true, full });
+      out.push({ kind, items, chord: true });
       prev = items[items.length - 1];
       continue;
     }
-    const root = pickOne(prev);
-    prev = root;
-    out.push(kind === 'name' ? { kind, items: [root], chord: true, full, options: chordOptions(root, spec.roots, full, rnd) } : { kind, items: [root], chord: true, full });
+    const ref = pickOne(prev);
+    prev = ref;
+    out.push(kind === 'name' ? { kind, items: [ref], chord: true, options: chordOptions(ref, spec.roots, rnd) } : { kind, items: [ref], chord: true });
+  }
+  return out;
+}
+
+export const THIRD_OPTIONS = [thirdLabel('major'), thirdLabel('minor')];
+const THIRDS_PATTERN = ['interval', 'interval', 'interval', 'pair', 'pair', 'interval'] as const;
+
+// Major or minor 3rd? Mostly read and named; with a piano, some are played too (the first note is
+// given, then he finds the 3rd).
+export function buildThirdsLesson(
+  lesson: LessonDef,
+  stats: Record<ItemId, ItemStat>,
+  { mic, rnd = Math.random, length }: { mic: boolean; rnd?: Rnd; length?: number },
+): Challenge[] {
+  const pairs = lesson.thirds!.pairs;
+  const q = (p: [ItemId, ItemId]) => thirdQuality(p[0], p[1]);
+  const weights = pairs.map((p) => needWeight(stats[thirdItem(q(p))], false));
+  const count = length ?? (lesson.checkpoint ? 15 : 12);
+  const out: Challenge[] = [];
+  let prev = -1;
+  for (let i = 0; i < count; i++) {
+    const kind = mic ? THIRDS_PATTERN[i % THIRDS_PATTERN.length] : 'interval';
+    const idx = pairs.map((_, j) => j).filter((j) => j !== prev);
+    const j = Number(weightedPick(idx.map(String), idx.map((k) => weights[k]), rnd));
+    prev = j;
+    const items = [...pairs[j]];
+    out.push(kind === 'pair' ? { kind: 'burst', items, third: true, startHint: true } : { kind: 'interval', items, third: true, interval: 3, options: THIRD_OPTIONS });
   }
   return out;
 }
@@ -342,6 +402,6 @@ export function buildChordLesson(
 // For the lesson sheet: "D" for a note, or a word like "Skip" for an interval.
 export function describeNew(lesson: LessonDef): string[] {
   if (lesson.intervals) return lesson.intervals.newSizes.map(intervalLabel);
-  if (lesson.chords) return lesson.chords.newRoots.map((r) => chordName(r));
+  if (lesson.chords) return lesson.chords.newRoots.map(chordName);
   return lesson.newNotes.map(itemLetter);
 }

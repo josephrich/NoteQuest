@@ -1,7 +1,7 @@
 // The rules of a lesson in progress: judging answers, XP, combos and retries.
 // Kept free of React and audio so it can be unit tested.
 import { itemMidi, type ItemId } from './content';
-import { challengeAnswer, nameOptions, statItem, type Challenge } from './lesson';
+import { challengeAnswer, statItem, type Challenge } from './lesson';
 import type { LessonOutcome } from './progress';
 import { rollChest } from './rewards';
 
@@ -30,6 +30,11 @@ export interface Feedback {
   close?: boolean;
   // A chord with the right notes but the wrong one at the bottom (an inversion).
   inverted?: boolean;
+  // In a run: after too many misses on one note (or chord), it's shown and the run moves on. This is
+  // the one that was shown.
+  revealed?: ItemId;
+  // The note played, for showing where it sits (MIDI number).
+  midi?: number;
 }
 
 // What was heard (or pressed on screen) when a chord was asked for.
@@ -123,7 +128,7 @@ export class LessonRun {
       }
       return this.succeed(t, 0, false);
     }
-    const miss = { heard: midiLetter(midi), octaveSlip: (midi - target) % 12 === 0 };
+    const miss = { heard: midiLetter(midi), octaveSlip: (midi - target) % 12 === 0, midi };
     if (c.kind === 'play') return this.judgePlay(correct, miss, t);
     return this.judgeBurst(correct, miss, t);
   }
@@ -248,6 +253,21 @@ export class LessonRun {
     this.tries++;
     this.breakCombo();
     this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, ...miss };
+    if (this.tries < MAX_PLAY_TRIES) return this.feedback;
+    // Too many misses on this one: show it and move on to the next, rather than getting stuck.
+    const revealed = c.items[this.step];
+    this.record(statItem(c, this.step), false, null);
+    this.step++;
+    this.tries = 0;
+    this.stepShownAt = t;
+    this.feedback = { ...this.feedback, revealed };
+    if (this.step < c.items.length) return this.feedback;
+    // That was the last one: the run is over. Notes he did get still count.
+    const good = this.stepResults.filter(Boolean).length;
+    this.xp += this.scaled(good * (c.chord ? XP.burstChord : XP.burstNote));
+    this.scored++;
+    this.phase = 'reveal';
+    this.addActive(t);
     return this.feedback;
   }
 
@@ -298,7 +318,7 @@ export class LessonRun {
   private requeue(c: Challenge) {
     if (this.requeues >= MAX_REQUEUES) return;
     this.requeues++;
-    const again = c.kind === 'name' && !c.chord ? { ...c, options: nameOptions(c.items[0], this.rnd) } : { ...c };
+    const again = { ...c };
     this.queue = [...this.queue, again];
   }
 

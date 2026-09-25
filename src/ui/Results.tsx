@@ -44,6 +44,7 @@ const IMPROVEMENT_TEXT: Record<Improvement['kind'], (name: string) => string> = 
 
 // "treble G", "middle C", "the C chord", or an interval as a plural: "skips", "4ths", "octaves".
 function improvedName(id: string): string {
+  if (id.startsWith('third:')) return `${id.split(':')[1]} 3rds`;
   const size = itemInterval(id);
   if (size === null) return friendlyName(id);
   return `${intervalLabel(size).split(' · ').pop()!.toLowerCase()}s`;

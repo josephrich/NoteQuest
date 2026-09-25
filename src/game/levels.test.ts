@@ -52,7 +52,7 @@ describe('more runs of notes as he gets better', () => {
   });
 
   test('the Daily Review mixes in melodies and chords once they are learned', () => {
-    const learned = { ...stats(allNotes), 'interval:3': fluent, 'interval:5': fluent, 'chord:treble:C4': fluent, 'chord:treble:F4': fluent, 'chord:treble:G4': fluent };
+    const learned = { ...stats(allNotes), 'interval:3': fluent, 'interval:5': fluent, 'chord:treble:C4:major': fluent, 'chord:treble:F4:major': fluent, 'chord:treble:A4:minor': fluent };
     const review = buildReview(learned, { mic: true, rnd: seededRandom(5) });
     expect(review.filter((c) => c.chord && c.kind === 'play')).toHaveLength(1);
     expect(review.filter((c) => c.chord && c.kind === 'burst')).toHaveLength(1);

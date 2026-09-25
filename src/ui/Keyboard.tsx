@@ -1,7 +1,7 @@
 // A small piano keyboard with some keys lit up, drawn under the staff so he can see which key a
 // written note is. Middle C is always marked with a small grey "middle C" caption underneath, as the
 // landmark on the piano (in grey, not on the key, so it doesn't look like a key to play).
-import { LETTERS, parseNote, toMidi } from '../engine/music';
+import { LETTERS, noteName, parseNote, toMidi } from '../engine/music';
 
 const WHITE_W = 24;
 const WHITE_H = 100;
@@ -61,7 +61,14 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
       })}
       {whites.map((k, i) =>
         HAS_BLACK.has(k.letter) && i < whites.length - 1 ? (
-          <rect key={`b${k.midi}`} x={(i + 1) * WHITE_W - BLACK_W / 2} y={0} width={BLACK_W} height={BLACK_H} rx={2} fill="#2b2340" />
+          <g key={`b${k.midi}`}>
+            <rect x={(i + 1) * WHITE_W - BLACK_W / 2} y={0} width={BLACK_W} height={BLACK_H} rx={2} fill={lit.has(k.midi + 1) ? color : '#2b2340'} stroke="#2b2340" />
+            {lit.has(k.midi + 1) && (
+              <text x={(i + 1) * WHITE_W} y={BLACK_H - 8} textAnchor="middle" fontSize={9} fontWeight={800} fill="#fff">
+                {noteName(parsed[lit.get(k.midi + 1)!])}
+              </text>
+            )}
+          </g>
         ) : null,
       )}
       {hasLabels &&
@@ -69,6 +76,15 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
           const label = labelOf(k.midi);
           return label ? (
             <text key={`l${k.midi}`} x={i * WHITE_W + WHITE_W / 2} y={WHITE_H + 18} textAnchor="middle" fontSize={13} fontWeight={800} fill={color}>
+              {label}
+            </text>
+          ) : null;
+        })}
+      {hasLabels &&
+        whites.map((k, i) => {
+          const label = HAS_BLACK.has(k.letter) ? labelOf(k.midi + 1) : undefined;
+          return label ? (
+            <text key={`lb${k.midi}`} x={(i + 1) * WHITE_W} y={WHITE_H + 18} textAnchor="middle" fontSize={13} fontWeight={800} fill={color}>
               {label}
             </text>
           ) : null;

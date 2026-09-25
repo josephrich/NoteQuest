@@ -21,32 +21,48 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   and the 👤 button on the home screen switches player. Grown-ups can add and remove players. The
   piano tuning and the daily reminder are shared by everyone on the device. An existing save
   becomes the first player automatically.
-- **Path of lessons** in six units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines,
-  Steps, Skips & Leaps, and Chords. New notes are taught relative to landmark notes (middle C, the G line, the F
-  line, treble and bass C).
+- **Path of lessons** in seven units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines,
+  Steps, Skips & Leaps, Sharps, Flats & Naturals, and Chords. New notes are taught relative to
+  landmark notes (middle C, the G line, the F line, treble and bass C).
 - **Interval reading** (Unit 5): the skill that stops note-by-note decoding. Steps (line to space),
   skips (line to line), 4ths, 5ths and octaves, in both clefs. He names the jump between two notes,
-  plays a pair when told only the first note, and plays short four-note melodies built from the
-  jumps he knows.
-- **Chords** (Unit 6): three-note chords on the white keys, stacked line-line-line or
-  space-space-space and named by their bottom note. C, F and G, then D, E and A, in the right hand
-  and then the left. Later lessons name them in full (C, F and G are major; D, E and A are minor),
-  after a mini-lesson with 🔊 Hear it buttons for hearing happy and sad chords. He names chords,
-  plays them, and plays runs of three chords. If he plays a different chord from the lesson, it
-  says which one ("That was the F chord"). With one finger on the wrong key it says "Close! One note
-  is off". Only the written position counts: an inversion (the same letters with a different
-  bottom note) is marked "Right notes, wrong order!". On the on-screen piano he taps the three keys
-  one at a time.
+  plays a pair when told only the first note, and plays short melodies built from the jumps he
+  knows.
+- **Sharps, flats and naturals** (Unit 6): semitones and tones first (on the keyboard, including
+  the E–F and B–C semitones), then sharps (F♯, C♯), flats (B♭, E♭, and one black key having two
+  names), naturals, and the same in the bass clef. When naming a note, the choices always include
+  the same letter with and without its sign, so the sign is what's being read.
+- **Chords** (Unit 7), taught through what makes them sound the way they do rather than by rote:
+  - Stacking: root, 3rd and 5th, line-line-line or space-space-space. C, F and G major.
+  - Major and minor 3rds: a 3rd comes in two sizes, 4 semitones (major, bright) or 3 (minor,
+    darker). A lesson of telling them apart by counting semitones, and playing them.
+  - Major and minor chords: happy and sad by ear first, then why: a major chord has a major 3rd from
+    the root, a minor chord a minor 3rd. A, D and E minor.
+  - Making major chords: raise the 3rd a semitone. D, A and E major (with F♯, C♯, G♯), heard
+    against D, A and E minor.
+  - The left hand (major, then minor), a mixed "Major or minor?" lesson, and a checkpoint.
+  Chords are always called by their full name ("E minor", "E major"). Naming a chord always offers
+  the same root with the other quality, so it's the 3rd being read. He names chords, plays them,
+  and plays runs of three. If he plays a different chord from the lesson, it says which one ("That
+  was D minor. Check the 3rd."). With one finger on the wrong key it says "Close! One note is off".
+  Only the written position counts: an inversion is marked "Right notes, wrong order!". On the
+  on-screen piano he taps the three keys one at a time. 🔊 Hear it buttons play each chord shown,
+  in order.
+- **Seeing a wrong note**: when he plays the wrong note, it's drawn faintly in grey on the staff next
+  to the right one, with "Go higher" or "Go lower". A note far off the staff just says it was way too
+  high or low.
 - **Gets harder as he gets better**: a reading level goes up with the number of notes he reads
   quickly and accurately (8 notes for level 1, 18 for level 2). As it rises, lessons have more runs
   of notes and longer ones: runs of 3, then 4, then 5 notes, and interval melodies of 4, 5, then 6.
   The Daily Review follows the same level and, once he knows them, mixes in interval melodies and
   chords. Lessons that bring in notes he hasn't met yet stay a step gentler.
 - **Four tries**: a wrong note can be tried again. After 3 misses a hint appears; after 4 the answer
-  is shown and the lesson moves on.
-- **Mini-lessons** (📖 on the path): 14 short explainers placed just before the lessons that need
+  is shown and the lesson moves on. In a run of notes, the note he's stuck on is shown after 4
+  misses and the run carries on from the next one.
+- **Mini-lessons** (📖 on the path): 20 short explainers placed just before the lessons that need
   them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
-  spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, and chords. Each has a few cards
+  spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, semitones, sharps, flats and
+  naturals, and chords, 3rds and major and minor. Each has a few cards
   with pictures on the staff, quick tap questions and "now play it" moments. Wrong answers just
   explain and let him retry. A ‹ Back button returns to the previous card (questions already
   answered stay answered). The first read earns a chest; re-reading earns a little XP. Guides

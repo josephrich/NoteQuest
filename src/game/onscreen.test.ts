@@ -41,7 +41,9 @@ test('on-screen practice counts towards the daily goal and is logged separately'
 });
 
 test('the on-screen keyboard has every note the course uses, in the right clef', () => {
-  const ranges = { treble: keyboardKeys('treble').map((k) => k.midi), bass: keyboardKeys('bass').map((k) => k.midi) };
+  // White keys, and the black key after each C, D, F, G and A.
+  const keys = (clef: 'treble' | 'bass') => keyboardKeys(clef).flatMap((k) => ([0, 1, 3, 4, 5].includes(k.letter) ? [k.midi, k.midi + 1] : [k.midi]));
+  const ranges = { treble: keys('treble'), bass: keys('bass') };
   for (const unit of UNITS) for (const lesson of unit.lessons) for (const id of lesson.pool) expect(ranges[itemClef(id)], id).toContain(itemMidi(id));
 });
 
