@@ -8,6 +8,8 @@ import { REVIEW_ID, findLesson } from '../game/content';
 import { Results, type ResultsData } from './Results';
 import { Parent } from './Parent';
 import { Shop } from './Shop';
+import { Players } from './Players';
+import { readyPlayers } from '../game/players';
 import { setSoundEnabled } from './sound';
 import { listener } from '../engine/listener';
 
@@ -16,11 +18,14 @@ export type Screen =
   | { name: 'lesson'; lessonId: string; mic: boolean; run: number }
   | { name: 'results'; data: ResultsData }
   | { name: 'parent' }
-  | { name: 'shop' };
+  | { name: 'shop' }
+  | { name: 'players' };
 
 export function App() {
-  const { progress } = useProgress();
-  const [screen, setScreen] = useState<Screen>({ name: 'home' });
+  const { progress, household, switchTo } = useProgress();
+  // With more than one player, start by asking who's playing.
+  const [screen, setScreen] = useState<Screen>(() => (readyPlayers(household).length > 1 ? { name: 'players' } : { name: 'home' }));
+  const others = readyPlayers(household).filter((p) => p.id !== household.active);
 
   useEffect(() => setSoundEnabled(progress.settings.sound), [progress.settings.sound]);
 
@@ -30,7 +35,21 @@ export function App() {
     if (screen.name !== 'lesson') void listener.stop();
   }, [screen.name]);
 
-  if (!progress.profile) return <Welcome />;
+  if (!progress.profile)
+    return (
+      <Welcome
+        onDone={() => setScreen({ name: 'home' })}
+        // Adding a player can be cancelled, back to the players who already exist.
+        onCancel={
+          others.length
+            ? () => {
+                switchTo(others[0].id);
+                setScreen({ name: 'players' });
+              }
+            : undefined
+        }
+      />
+    );
   switch (screen.name) {
     case 'home':
       return <Home go={setScreen} />;
@@ -44,5 +63,7 @@ export function App() {
       return <Parent go={setScreen} />;
     case 'shop':
       return <Shop go={setScreen} />;
+    case 'players':
+      return <Players go={setScreen} />;
   }
 }

@@ -77,6 +77,9 @@ export function Home({ go }: { go: (s: Screen) => void }) {
           ⚡ {progress.xp}
         </span>
         <span className="spacer" />
+        <button className="pill pill-player" title="Switch player" onClick={() => go({ name: 'players' })}>
+          👤 {progress.profile!.name}
+        </button>
         <button className="btn btn-shop" onClick={() => go({ name: 'shop' })}>
           🛍️ Shop
         </button>

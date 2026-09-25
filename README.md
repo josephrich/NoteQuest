@@ -15,6 +15,11 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
 
 - **Onboarding**: the player's name and a name for their dragon (both kept on the device only),
   plus a quick "play any note" mic check.
+- **Players**: everyone in the family can have their own player, each with its own dragon, streak,
+  gems, prizes and progress. **Who's playing?** appears at launch when there's more than one player,
+  and the 👤 button on the home screen switches player. Grown-ups can add and remove players. The
+  piano tuning and the daily reminder are shared by everyone on the device. An existing save
+  becomes the first player automatically.
 - **Path of lessons** in five units: Treble Landmarks, Bass Landmarks, Both Hands, Ledger Lines, and
   Steps, Skips & Leaps. New notes are taught relative to landmark notes (middle C, the G line, the F
   line, treble and bass C).

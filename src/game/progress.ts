@@ -180,25 +180,33 @@ export function isUnlocked(p: Progress, lessonId: string): boolean {
   return LESSON_ORDER.indexOf(lessonId) <= frontier(p);
 }
 
-const STORAGE_KEY = 'nq.progress.v1';
+// Before players, the one player's progress was saved under this key. It is read once to move it
+// into the household (see players.ts) and then left alone as a backup.
+export const LEGACY_KEY = 'nq.progress.v1';
 
-export function loadProgress(): Progress {
+// A saved progress, with anything added since it was saved filled in.
+export function parseProgress(parsed: Progress): Progress {
+  const base = initialProgress();
+  return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings }, shop: { ...base.shop, ...parsed.shop } };
+}
+
+export function loadLegacyProgress(): Progress | null {
   try {
-    const raw = storage.get(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Progress;
-      // Fill in anything added since this progress was saved.
-      const base = initialProgress();
-      if (parsed.version === 1) return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings }, shop: { ...base.shop, ...parsed.shop } };
-    }
-    // Carry over the tuning from the mic test page if it was done first.
-    const ref = Number(JSON.parse(storage.get('nq.refA4') ?? 'null'));
-    return initialProgress(ref > 400 && ref < 480 ? ref : 440);
+    const raw = storage.get(LEGACY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Progress;
+    return parsed.version === 1 ? parseProgress(parsed) : null;
   } catch {
-    return initialProgress();
+    return null;
   }
 }
 
-export function saveProgress(p: Progress): void {
-  storage.set(STORAGE_KEY, JSON.stringify(p));
+// Tuning done on the mic test page before the app was first set up.
+export function micTestTuning(): number {
+  try {
+    const ref = Number(JSON.parse(storage.get('nq.refA4') ?? 'null'));
+    return ref > 400 && ref < 480 ? ref : 440;
+  } catch {
+    return 440;
+  }
 }

@@ -9,7 +9,7 @@ import { unlockSound, sfx } from './sound';
 
 const DRAGON_NAMES = ['Ember', 'Blaze', 'Spark', 'Ziggy', 'Pip'];
 
-export function Welcome() {
+export function Welcome({ onDone, onCancel }: { onDone?: () => void; onCancel?: () => void }) {
   const { update } = useProgress();
   const [step, setStep] = useState<'name' | 'dragon' | 'mic'>('name');
   const [name, setName] = useState('');
@@ -29,6 +29,7 @@ export function Welcome() {
   const finish = () => {
     void listener.stop();
     update((p) => ({ ...p, profile: { name: name.trim(), dragonName: dragonName.trim() || 'Ember' } }));
+    onDone?.();
   };
 
   const startMic = async () => {
@@ -63,6 +64,11 @@ export function Welcome() {
           <button className="btn btn-primary btn-big" disabled={!name.trim()}>
             Next
           </button>
+          {onCancel && (
+            <button type="button" className="btn btn-link" onClick={onCancel}>
+              Back to players
+            </button>
+          )}
         </form>
       )}
 

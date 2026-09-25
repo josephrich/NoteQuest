@@ -1,6 +1,8 @@
 // Grown-ups area: settings, piano tuning, and how his note reading is going.
 import { useEffect, useMemo, useState } from 'react';
-import { useProgress } from './store';
+import { useHousehold, useProgress } from './store';
+import { Dragon } from './Dragon';
+import { readyPlayers } from '../game/players';
 import { listener } from '../engine/listener';
 import { freqToMidiFloat, midiName } from '../engine/music';
 import { dayKey, initialProgress } from '../game/progress';
@@ -260,6 +262,46 @@ function Prizes() {
   );
 }
 
+// Everyone who plays on this device. Stats and settings below are for the selected player.
+function PlayersCard({ go }: { go: (s: Screen) => void }) {
+  const { household, switchTo, addNew, remove } = useHousehold();
+  const players = readyPlayers(household);
+  return (
+    <section className="card">
+      <h2>Players</h2>
+      <p className="muted">Each player has their own dragon, streak, gems, prizes and progress. Tap a player to see their stats below.</p>
+      {players.map((p) => (
+        <div key={p.id} className={`claim-row player-row ${p.id === household.active ? 'player-row-on' : ''}`}>
+          <button className="player-row-pick" onClick={() => switchTo(p.id)} aria-pressed={p.id === household.active}>
+            <Dragon mood="happy" size={40} skin={p.progress.shop.skin} outfit={p.progress.shop.outfit} />
+            <span>
+              <strong>{p.progress.profile!.name}</strong> <span className="muted">· {p.progress.xp} XP</span>
+            </span>
+          </button>
+          <button
+            className="btn btn-quiet"
+            onClick={() => {
+              const name = p.progress.profile!.name;
+              if (window.confirm(`Remove ${name}? All of ${name}'s progress, gems and prizes will be erased. This cannot be undone.`)) remove(p.id);
+            }}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        className="btn btn-secondary"
+        onClick={() => {
+          addNew();
+          go({ name: 'home' });
+        }}
+      >
+        + Add a player
+      </button>
+    </section>
+  );
+}
+
 export function Parent({ go }: { go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
   const [open, setOpen] = useState(false);
@@ -277,6 +319,12 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <h1>Grown-ups</h1>
       </header>
 
+      <PlayersCard go={go} />
+
+      <header className="parent-player">
+        <h2>{profile.name}</h2>
+      </header>
+
       <section className="card">
         <h2>Practice</h2>
         <p>
@@ -288,7 +336,7 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
 
       <section className="card">
         <h2>Note reading</h2>
-        <p className="muted">Slowest notes first. Under 1.5 s is fluent reading; over 2.5 s means he is still working it out.</p>
+        <p className="muted">Slowest notes first. Under 1.5 s is fluent reading; over 2.5 s means {profile.name} is still working it out.</p>
         <ReadingSpeeds />
       </section>
 
@@ -368,12 +416,12 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
         <button
           className="btn btn-danger"
           onClick={() => {
-            if (window.confirm('Erase all progress, XP, gems and streak? This cannot be undone.')) {
+            if (window.confirm(`Erase all of ${profile.name}'s progress, XP, gems and streak? This cannot be undone.`)) {
               update((p) => ({ ...initialProgress(p.settings.refA4), profile: p.profile }));
             }
           }}
         >
-          Reset progress
+          Reset {profile.name}'s progress
         </button>
       </section>
     </main>

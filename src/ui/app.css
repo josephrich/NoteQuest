@@ -389,3 +389,23 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
   .meet p { font-size: 1.2rem; }
   .guide-text { font-size: 1.2rem; }
 }
+
+/* Players */
+.players { min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: max(40px, env(safe-area-inset-top)) 16px 40px; }
+.players h1 { margin: 0; font-size: 2rem; }
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; width: 100%; max-width: 760px; }
+.player-card {
+  font: inherit; color: inherit; display: grid; justify-items: center; gap: 6px; padding: 18px 12px; cursor: pointer;
+  background: #fff; border: 3px solid var(--line); border-radius: 22px; box-shadow: 0 6px 0 var(--line);
+}
+.player-card strong { font-size: 1.3rem; }
+.player-card:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--line); }
+.player-current { border-color: #7c5cff; box-shadow: 0 6px 0 #c9baff; }
+.player-stats { color: var(--muted); font-weight: 700; }
+.player-add { border-style: dashed; }
+.player-plus { width: 110px; height: 110px; display: grid; place-items: center; font-size: 4rem; font-weight: 900; color: #7c5cff; }
+.pill-player { font: inherit; font-weight: 800; cursor: pointer; }
+.parent-player h2 { margin: 8px 0 0; font-size: 1.5rem; }
+.player-row { align-items: center; }
+.player-row-pick { display: flex; align-items: center; gap: 10px; font: inherit; color: inherit; background: none; border: 2px solid transparent; border-radius: 14px; padding: 4px 10px 4px 4px; cursor: pointer; text-align: left; }
+.player-row-on .player-row-pick { border-color: #7c5cff; background: #efeaff; }

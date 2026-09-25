@@ -13,7 +13,7 @@ export interface KeyValueStore {
 }
 
 // Keys the app uses; loaded up front on native.
-const KEYS = ['nq.progress.v1', 'nq.refA4'];
+const KEYS = ['nq.players.v1', 'nq.progress.v1', 'nq.refA4'];
 
 const web: KeyValueStore = {
   get(key) {
