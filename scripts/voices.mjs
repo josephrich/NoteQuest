@@ -40,7 +40,7 @@ let key = process.env.OPENAI_API_KEY;
 // ---- VOICE SETTINGS ------------------------------------------------------------------------------
 // Every line is recorded separately, so the instructions are specific: anything left open (accent,
 // energy, speed) can come out differently from one line to the next.
-const voice = process.env.VOICE ?? 'coral';
+const voice = process.env.VOICE ?? 'shimmer';
 const model = process.env.VOICE_MODEL ?? 'gpt-4o-mini-tts';
 const ACCENTS = {
   australian: 'A light, natural Australian English accent, as a teacher in Melbourne would speak. Not broad or exaggerated.',
@@ -71,7 +71,7 @@ Don't: add words, sound effects or laughter; read punctuation aloud; whisper or 
 `.trim();
 
 // Candidates for --sample: voices that suit a warm teacher (you can name any OpenAI voice).
-const SAMPLE_VOICES = ['coral', 'sage', 'nova', 'shimmer', 'ballad', 'fable'];
+const SAMPLE_VOICES = ['shimmer', 'coral', 'sage', 'nova', 'ballad', 'fable'];
 // Lines from the app that exercise the tricky parts: note names, sharps, a question, a correction.
 const SAMPLE_LINES = [
   'New chord!',
