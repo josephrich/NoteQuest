@@ -3,6 +3,9 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { Staff } from './Staff';
 import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
+import { Keyboard } from './Keyboard';
+import { SpeakButton } from './SpeakButton';
+import { spell } from '../engine/music';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
@@ -144,6 +147,7 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
               ? 'Play these notes in order'
               : 'Play this note';
   const wrong = run.feedback && !run.feedback.correct ? run.feedback : null;
+  const tip = c.kind === 'meet' ? (c.interval ? INTERVAL_TIPS[c.interval] : noteTip(c.items[0])) : '';
   // The note to play right now (for hints), and the full answer for tap challenges and reveals.
   const answer = itemLetter(expected);
   const fullAnswer = tapToAnswer ? challengeAnswer(c) : answer;
@@ -164,7 +168,10 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
 
       <main className="lesson-body">
         <ModeBanner mode={mode} text={mode === 'learn' ? (c.interval ? 'New jump' : 'New note') : undefined} />
-        <h1 className="prompt">{prompt}</h1>
+        {/* Read out when the question changes (not every repeat of "Play this note"); new-note cards read their tip instead. */}
+        <h1 className="prompt">
+          {prompt} <SpeakButton text={prompt} auto={progress.settings.readAloud && c.kind !== 'meet'} />
+        </h1>
 
         <div key={shake} className={`staff-card ${wrong && run.phase === 'asking' ? 'shake' : ''}`} data-expected={itemMidi(expected)}>
           <Staff
@@ -174,12 +181,14 @@ export function LessonScreen({ lessonId, mic, go }: { lessonId: string; mic: boo
             label={c.items.length > 1 ? `${c.items.length} notes` : `${answer}`}
           />
           {c.kind === 'meet' && <div className="meet-name">{c.interval ? intervalLabel(c.interval) : answer}</div>}
+          {c.kind === 'meet' && <Keyboard notes={c.items.map((id) => spell(itemNote(id)))} />}
         </div>
 
         {c.kind === 'meet' && (
           <div className="meet">
             <MyDragon mood="think" size={72} />
-            <p>{c.interval ? INTERVAL_TIPS[c.interval] : noteTip(c.items[0])}</p>
+            <p>{tip}</p>
+            <SpeakButton text={tip} auto={progress.settings.readAloud} />
           </div>
         )}
 

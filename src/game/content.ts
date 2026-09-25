@@ -62,12 +62,12 @@ export function shiftItem(id: ItemId, steps: number): ItemId {
 
 // How each interval looks, and an example pair to show when it is introduced.
 export const INTERVAL_TIPS: Record<number, string> = {
-  1: 'When a note repeats, it stays in exactly the same place. Play the same key again.',
-  2: 'A step goes from a line to the very next space, or a space to the very next line. On the piano it is the next white key.',
-  3: 'A skip goes from a line to the next line, or a space to the next space. It jumps over one white key.',
-  4: 'A 4th goes from a line to a space (or a space to a line), with two notes in between. It is bigger than a skip.',
-  5: 'A 5th goes from a line to a line two lines away (or space to space). In a five-finger position it is thumb to little finger.',
-  8: 'An octave lands on the same letter, eight notes away. One note is on a line and the other is in a space. Stretch your hand!',
+  1: 'Same place, same note. Play the key again.',
+  2: 'Line to the next space: a step. The very next key.',
+  3: 'Line to the next line: a skip. Jump over one key.',
+  4: 'Line to space, two notes in between: a 4th.',
+  5: 'Line to line, over one line: a 5th. Thumb to little finger!',
+  8: 'The same letter, 8 notes away: an octave. Stretch!',
 };
 
 export function intervalExample(size: number, clef: Clef): [ItemId, ItemId] {
@@ -214,12 +214,12 @@ export const UNITS: UnitDef[] = [
 
 // Landmarks get hand-written tips; every other note is described relative to the nearest landmark.
 const LANDMARK_TIPS: Record<ItemId, string> = {
-  'treble:C4': 'Middle C sits on its own little line just below the treble staff. It lives right in the middle of the piano.',
-  'treble:G4': 'The treble clef is really a fancy G. Its curl wraps around the 2nd line up, and that line is G.',
-  'treble:C5': 'Treble C lives in the 3rd space, right in the middle of the staff. It is the C just above middle C.',
-  'bass:C4': 'In the bass clef, middle C sits on its own little line just above the staff.',
-  'bass:F3': 'The bass clef is really a fancy F. Its two dots hug the 4th line up, and that line is F.',
-  'bass:C3': 'Bass C lives in the 2nd space. It is the C just below middle C.',
+  'treble:C4': 'Middle C sits on a little line below the staff, in the middle of the piano.',
+  'treble:G4': 'The treble clef curls around the G line: the 2nd line up.',
+  'treble:C5': 'Treble C is in the 3rd space, right in the middle of the staff.',
+  'bass:C4': 'In the bass clef, middle C sits on a little line above the staff.',
+  'bass:F3': 'The bass clef dots hug the F line: the 4th line up.',
+  'bass:C3': 'Bass C is in the 2nd space, just below middle C.',
 };
 
 // Ledger-line notes are easier to learn by counting lines than by stepping from a landmark.

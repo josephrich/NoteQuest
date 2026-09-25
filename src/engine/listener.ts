@@ -27,6 +27,8 @@ export class Listener {
   private frame = 0;
   private starting: Promise<void> | null = null;
   private refA4 = 440;
+  // While the app itself is talking (read-aloud), notes aren't reported, until shortly after it stops.
+  private heldUntil = 0;
 
   get running(): boolean {
     return this.mic.running;
@@ -101,6 +103,20 @@ export class Listener {
     };
   }
 
+  // Stop reporting notes (e.g. while reading aloud), and start again shortly after release, once
+  // the voice has died away.
+  hold(): void {
+    this.heldUntil = Infinity;
+  }
+
+  release(): void {
+    if (this.heldUntil === Infinity) this.heldUntil = performance.now() + 400;
+  }
+
+  get held(): boolean {
+    return performance.now() < this.heldUntil;
+  }
+
   // Pretend a note was played (used by automated tests via ?debug).
   simulate(midi: number): void {
     const t = performance.now();
@@ -118,8 +134,12 @@ export class Listener {
     const f = this.mic.read();
     const onset = this.onsets.update(f.t, f.rms);
     const pitch = detectPitch(f.pitchWindow, this.mic.sampleRate);
-    const noteEvent = this.notes.update({ t: f.t, onset, silent: f.rms < this.onsets.gate, pitch, rms: f.rms });
-    if (noteEvent) this.emitNote(noteEvent);
+    if (this.held) {
+      this.notes.reset();
+    } else {
+      const noteEvent = this.notes.update({ t: f.t, onset, silent: f.rms < this.onsets.gate, pitch, rms: f.rms });
+      if (noteEvent) this.emitNote(noteEvent);
+    }
     if (this.chordTarget) {
       const chordEvent = this.chords.update({ t: f.t, onset, mags: f.mags });
       if (chordEvent) this.chordSubs.forEach((fn) => fn(chordEvent));

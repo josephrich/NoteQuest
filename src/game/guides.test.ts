@@ -35,6 +35,12 @@ describe('guides', () => {
           if (card.picture.labels) expect(card.picture.labels.length, `${guide.id}: ${card.text}`).toBe(count);
         }
         if (card.kind === 'quiz') expect(card.options, card.text).toContain(card.answer);
+        if (card.kind !== 'play' && card.keys) {
+          for (const n of card.keys.notes) expect(() => parseNote(n), n).not.toThrow();
+          if (card.keys.labels) expect(card.keys.labels.length).toBe(card.keys.notes.length);
+        }
+        // Show more, say less: every card is short enough to read (or hear) in one go.
+        expect(card.text.split(/\s+/).length, card.text).toBeLessThanOrEqual(16);
         if (card.kind === 'play') {
           for (const n of card.play) {
             const m = toMidi(parseNote(n));

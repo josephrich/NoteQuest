@@ -23,7 +23,8 @@ export interface Progress {
   lessons: Record<string, { completed: number; bestAccuracy: number }>;
   items: Record<ItemId, ItemStat>;
   // reminderAt is minutes after midnight (iOS app only). unlockAll opens every lesson on the path.
-  settings: { refA4: number; dailyGoalMin: number; sound: boolean; reminders: boolean; reminderAt: number; unlockAll: boolean };
+  // readAloud reads explanations and questions aloud automatically, for younger players.
+  settings: { refA4: number; dailyGoalMin: number; sound: boolean; reminders: boolean; reminderAt: number; unlockAll: boolean; readAloud: boolean };
   shop: ShopState;
   // Real-world prizes a grown-up has set up, and the ones he has claimed.
   prizes: Prize[];
@@ -43,7 +44,7 @@ export function initialProgress(refA4 = 440): Progress {
     streak: { count: 0, lastDay: null, freezes: 1, best: 0 },
     lessons: {},
     items: {},
-    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false },
+    settings: { refA4, dailyGoalMin: 10, sound: true, reminders: false, reminderAt: 17 * 60 + 30, unlockAll: false, readAloud: false },
     shop: initialShop(),
     prizes: [],
     claims: [],

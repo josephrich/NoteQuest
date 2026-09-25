@@ -33,6 +33,11 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   with pictures on the staff, quick tap questions and "now play it" moments. Wrong answers just
   explain and let him retry. The first read earns a chest; re-reading earns a little XP. Guides
   never lock the path, so lessons he's already reached stay open.
+- **Show more, say less, and read aloud**: explainer and new-note cards show the matching keys lit
+  up on a small piano keyboard under the staff (middle C always has a dot), and every card is one
+  short sentence. A 🔊 button reads explanations and prompts aloud with the device's built-in voice.
+  Grown-ups can switch on **Read aloud automatically** for younger players. Note listening pauses
+  while the voice talks, and note letters are pronounced as letters ("A" as "ay").
 - **Clear modes**: tapping (orange, 👆), playing (blue, 🎹) and learning (purple, 📖) each have
   their own banner and background tint. The banner pops and chimes when the mode changes, and
   questions come in blocks so the mode changes less often.

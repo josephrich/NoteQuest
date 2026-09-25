@@ -409,3 +409,17 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 .player-row { align-items: center; }
 .player-row-pick { display: flex; align-items: center; gap: 10px; font: inherit; color: inherit; background: none; border: 2px solid transparent; border-radius: 14px; padding: 4px 10px 4px 4px; cursor: pointer; text-align: left; }
 .player-row-on .player-row-pick { border-color: #7c5cff; background: #efeaff; }
+
+/* Read aloud */
+.btn-speak {
+  flex: none; display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; vertical-align: middle;
+  border: 2px solid var(--line); background: #fff; font-size: 1.4rem; cursor: pointer; box-shadow: 0 3px 0 var(--line);
+}
+.btn-speak:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+.btn-speak.speaking { border-color: #7c5cff; background: #efeaff; animation: speak-pulse 1s ease-in-out infinite; }
+@keyframes speak-pulse { 50% { box-shadow: 0 0 0 6px rgba(124, 92, 255, 0.2); } }
+.try-again .btn-speak, .fb-sub .btn-speak { width: 36px; height: 36px; font-size: 1.05rem; }
+
+/* Piano keys under the staff */
+.keyboard { display: block; width: 100%; max-width: 520px; margin: 4px auto 0; }
+.meet .btn-speak { margin-left: auto; }

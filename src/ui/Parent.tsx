@@ -10,6 +10,7 @@ import { intervalLabel, itemClef, itemInterval, itemNote, type ItemId } from '..
 import { spell } from '../engine/music';
 import { PRIZE_IDEAS, addPrize, markGiven, removePrize } from '../game/shop';
 import { remindersSupported, requestReminderPermission } from '../platform/reminders';
+import { speechSupported } from './speech';
 import type { Screen } from './App';
 
 function Gate({ onPass, onCancel }: { onPass: () => void; onCancel: () => void }) {
@@ -368,6 +369,12 @@ export function Parent({ go }: { go: (s: Screen) => void }) {
           <input type="checkbox" checked={progress.settings.unlockAll} onChange={(e) => setSettings({ unlockAll: e.target.checked })} /> Unlock
           every lesson <span className="muted">(to skip ahead, or to try later units)</span>
         </label>
+        {speechSupported && (
+          <label className="check">
+            <input type="checkbox" checked={progress.settings.readAloud} onChange={(e) => setSettings({ readAloud: e.target.checked })} /> Read aloud
+            automatically <span className="muted">(for younger players: explanations and questions are spoken. The 🔊 button works either way)</span>
+          </label>
+        )}
         <label className="check">
           <input type="checkbox" checked={progress.settings.sound} onChange={(e) => setSettings({ sound: e.target.checked })} /> Sound effects
         </label>

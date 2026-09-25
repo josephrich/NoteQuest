@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MyDragon } from './MyDragon';
 import { ModeBanner, type Mode } from './ModeBanner';
 import { GrandStaff, Staff } from './Staff';
+import { Keyboard } from './Keyboard';
+import { SpeakButton } from './SpeakButton';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise } from './lines';
@@ -159,6 +161,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
         <div className="guide-talk">
           <MyDragon mood={card.kind === 'quiz' && wrongTaps.length ? 'think' : done ? 'cheer' : 'happy'} size={88} />
           <p className="guide-text">{card.text}</p>
+          <SpeakButton key={index} text={card.text} auto={progress.settings.readAloud} />
         </div>
 
         {card.picture && (
@@ -167,6 +170,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
             data-expected={card.kind === 'play' && played < card.play.length ? toMidi(parseNote(card.play[played])) : undefined}
           >
             <PictureView picture={card.picture} played={card.kind === 'play' ? played : 0} />
+            {card.kind !== 'play' && card.keys && <Keyboard notes={card.keys.notes} labels={card.keys.labels} />}
           </div>
         )}
 
@@ -197,7 +201,7 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
         )}
         {card.kind === 'quiz' && wrongTaps.length > 0 && !done && (
           <p className="try-again" role="status">
-            Not quite. {card.why} Try again!
+            Not quite. {card.why} Try again! <SpeakButton text={`Not quite. ${card.why} Try again!`} auto={progress.settings.readAloud} />
           </p>
         )}
 
@@ -234,7 +238,11 @@ export function GuideScreen({ lessonId, mic, go }: { lessonId: string; mic: bool
         <footer className="sheet-feedback good" role="status">
           <div>
             <div className="fb-title">{cheer}</div>
-            {card.kind === 'quiz' && <div className="fb-sub">{card.why}</div>}
+            {card.kind === 'quiz' && (
+              <div className="fb-sub">
+                {card.why} <SpeakButton text={`${cheer} ${card.why}`} auto={progress.settings.readAloud} />
+              </div>
+            )}
           </div>
           <button className="btn btn-good" onClick={next}>
             {last ? 'Finish' : 'Continue'}

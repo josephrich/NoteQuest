@@ -9,6 +9,7 @@ import { GUIDES } from '../game/guides';
 import { currentStreak, goalMs, isUnlocked, nextLessonId, today } from '../game/progress';
 import { listener } from '../engine/listener';
 import { unlockSound } from './sound';
+import { unlockSpeech } from './speech';
 import { REVIEW_ID, focusItems, friendlyName, reviewDoneToday, reviewUnlocked } from '../game/review';
 import type { Screen } from './App';
 
@@ -53,6 +54,7 @@ export function Home({ go }: { go: (s: Screen) => void }) {
 
   const start = async (lessonId: string) => {
     unlockSound();
+    unlockSpeech();
     setStarting(true);
     // Starting the mic needs this tap; if it fails the lesson becomes tap-only.
     let mic = true;
