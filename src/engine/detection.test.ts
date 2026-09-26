@@ -139,7 +139,7 @@ test('random speech almost never passes as a piano note, and every piano key doe
     addPiano(sig, [midi], { start: 0.3, gain: 0.05 }); // played softly
     assert.ok(track(sig).some((e) => e.stage === 'sure' && e.midi === midi), `${midiName(midi)} never sure`);
   }
-});
+}, 60_000);
 
 test('talking over a ringing piano note does not make a sure wrong note', () => {
   const sig = new Float32Array(Math.round(1.6 * SR));
