@@ -4,11 +4,13 @@ import type { Progress } from './progress';
 
 export type Slot = 'head' | 'face' | 'neck';
 
+// `treasure`: can't be bought, only found in a rare chest.
 export interface SkinItem {
   kind: 'skin';
   id: string;
   name: string;
   price: number;
+  treasure?: boolean;
 }
 
 export interface Accessory {
@@ -17,6 +19,7 @@ export interface Accessory {
   name: string;
   slot: Slot;
   price: number;
+  treasure?: boolean;
 }
 
 export type CatalogItem = SkinItem | Accessory;
@@ -41,7 +44,16 @@ export const ACCESSORIES: Accessory[] = [
   { kind: 'accessory', id: 'crown', name: 'Crown', slot: 'head', price: 400 },
 ];
 
-export const CATALOG: CatalogItem[] = [...SKINS, ...ACCESSORIES];
+// Dragon treasures: found only in the rarest chests, never sold.
+export const TREASURES: CatalogItem[] = [
+  { kind: 'skin', id: 'crystal', name: 'Crystal', price: 0, treasure: true },
+  { kind: 'skin', id: 'ember', name: 'Ember', price: 0, treasure: true },
+  { kind: 'accessory', id: 'halo', name: 'Golden halo', slot: 'head', price: 0, treasure: true },
+  { kind: 'accessory', id: 'starshades', name: 'Star glasses', slot: 'face', price: 0, treasure: true },
+  { kind: 'accessory', id: 'medal', name: 'Champion medal', slot: 'neck', price: 0, treasure: true },
+];
+
+export const CATALOG: CatalogItem[] = [...SKINS, ...ACCESSORIES, ...TREASURES];
 
 export const FREEZE_PRICE = 60;
 export const MAX_FREEZES = 2;
@@ -105,7 +117,7 @@ export function findItem(id: string): CatalogItem | undefined {
 
 export function buyItem(p: Progress, id: string): ShopResult {
   const item = findItem(id);
-  if (!item) return { ok: false, reason: 'unknown' };
+  if (!item || item.treasure) return { ok: false, reason: 'unknown' };
   if (p.shop.owned.includes(id)) return { ok: false, reason: 'owned' };
   if (p.gems < item.price) return { ok: false, reason: 'gems' };
   const bought = { ...p, gems: p.gems - item.price, shop: { ...p.shop, owned: [...p.shop.owned, id] } };

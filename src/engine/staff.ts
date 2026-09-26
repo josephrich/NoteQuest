@@ -11,10 +11,13 @@ export interface StaffSpec {
   colors?: (string | undefined)[];
   // Optional text under each group, e.g. a note name in an explainer.
   labels?: (string | undefined)[];
-  // Optional extra note drawn faintly in a group, e.g. the wrong note he played, to show where it
-  // sits compared with the right one.
-  ghosts?: (Note | undefined)[];
+  // Optional extra notes drawn faintly in a group, e.g. the wrong notes he played, to show where they
+  // sit compared with the right ones.
+  ghosts?: (Note[] | undefined)[];
   ghostColor?: string;
+  // Optional colour for each note of a group (in the order given), e.g. green for a chord's notes he
+  // got right. Overrides the group's colour.
+  keyColors?: ((string | undefined)[] | undefined)[];
   // In a run of notes, the one to play now: marked with a soft band behind it and an arrow under it.
   current?: number;
   label: string;
@@ -38,10 +41,20 @@ const LABELLED_HEIGHT = 180;
 function makeNote(
   clef: Clef,
   notes: Note[],
-  opts: { single: boolean; key?: KeyName; color?: string; label?: string; labelAbove?: boolean; ghost?: Note; ghostColor?: string },
+  opts: {
+    single: boolean;
+    key?: KeyName;
+    color?: string;
+    label?: string;
+    labelAbove?: boolean;
+    ghosts?: Note[];
+    ghostColor?: string;
+    keyColors?: (string | undefined)[];
+  },
 ) {
-  // VexFlow wants a chord's notes from low to high; the ghost goes in with them.
-  const group = opts.ghost ? [...notes, opts.ghost].sort((a, b) => a.octave * 7 + a.letter - (b.octave * 7 + b.letter)) : notes;
+  // VexFlow wants a chord's notes from low to high; any ghosts go in with them.
+  const ghosts = opts.ghosts ?? [];
+  const group = [...notes, ...ghosts].sort((a, b) => a.octave * 7 + a.letter - (b.octave * 7 + b.letter) || a.acc - b.acc);
   const n = new StaveNote({ clef, keys: group.map(vexKey), duration: opts.single ? 'w' : 'q', align_center: opts.single });
   // With a key signature showing, notes that follow it need no accidental.
   group.forEach((g, j) => {
@@ -49,12 +62,16 @@ function makeNote(
     else if (g.natural) n.addModifier(new Accidental('n'), j);
   });
   if (opts.color) n.setStyle({ fillStyle: opts.color, strokeStyle: opts.color });
-  if (opts.ghost) {
-    const style = { fillStyle: opts.ghostColor ?? '#aaa', strokeStyle: opts.ghostColor ?? '#aaa' };
-    n.setKeyStyle(group.indexOf(opts.ghost), style);
-    const acc = n.getModifiersByType('Accidental').find((m) => m.getIndex() === group.indexOf(opts.ghost!));
-    acc?.setStyle(style);
-  }
+  const styleKey = (note: Note, color: string) => {
+    const i = group.indexOf(note);
+    const style = { fillStyle: color, strokeStyle: color };
+    n.setKeyStyle(i, style);
+    n.getModifiersByType('Accidental')
+      .find((m) => m.getIndex() === i)
+      ?.setStyle(style);
+  };
+  notes.forEach((note, i) => opts.keyColors?.[i] && styleKey(note, opts.keyColors[i]!));
+  ghosts.forEach((g) => styleKey(g, opts.ghostColor ?? '#aaa'));
   if (opts.label) {
     const a = new Annotation(opts.label).setVerticalJustification(opts.labelAbove ? Annotation.VerticalJustify.TOP : Annotation.VerticalJustify.BOTTOM);
     a.setFont('Arial', 13, 'bold');
@@ -94,7 +111,15 @@ export function renderStaff(el: HTMLElement, spec: StaffSpec): void {
 
   const single = spec.groups.length === 1;
   const notes = spec.groups.map((group, i) =>
-    makeNote(spec.clef, group, { single, key: spec.key, color: spec.colors?.[i], label: spec.labels?.[i], ghost: spec.ghosts?.[i], ghostColor: spec.ghostColor }),
+    makeNote(spec.clef, group, {
+      single,
+      key: spec.key,
+      color: spec.colors?.[i],
+      label: spec.labels?.[i],
+      ghosts: spec.ghosts?.[i],
+      ghostColor: spec.ghostColor,
+      keyColors: spec.keyColors?.[i],
+    }),
   );
   const voice = new Voice({ num_beats: Math.max(1, notes.length), beat_value: 4 });
   voice.setMode(Voice.Mode.SOFT);

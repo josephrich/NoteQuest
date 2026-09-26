@@ -1,7 +1,9 @@
 // The end-of-lesson treasure chest: tap, it shakes while its glow flickers through the rarity
 // colours like a slot machine, then bursts open with gems and counts them up.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { RARITIES, type ChestRoll, type Rarity } from '../game/rewards';
+import { type ChestRoll, type Rarity } from '../game/rewards';
+import { findItem } from '../game/shop';
+import { Dragon } from './Dragon';
 import { sfx } from './sound';
 
 export const RARITY_STYLE: Record<Rarity, { color: string; label: string }> = {
@@ -9,7 +11,11 @@ export const RARITY_STYLE: Record<Rarity, { color: string; label: string }> = {
   rare: { color: '#2fbf71', label: 'Rare chest!' },
   epic: { color: '#a259ff', label: 'EPIC chest!' },
   legendary: { color: '#ffb020', label: 'LEGENDARY!' },
+  treasure: { color: '#ff5dd8', label: 'DRAGON TREASURE!' },
 };
+
+// The reels flicker through these (never the treasure, so it's a real surprise when it comes).
+const FLICKER: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
 
 // Gaps between flickers get longer, so the "reels" slow down before landing.
 const FLICKER_GAPS = [70, 70, 75, 80, 90, 100, 115, 135, 160, 195, 240, 300];
@@ -45,9 +51,10 @@ export function Chest({ roll, totalAfter, onOpened }: { roll: ChestRoll; totalAf
   const [shown, setShown] = useState(0);
   const timers = useRef<number[]>([]);
   const style = RARITY_STYLE[state === 'open' ? roll.rarity : flicker];
+  const treasure = roll.item ? findItem(roll.item) : undefined;
   const sparks = useMemo(
     () =>
-      Array.from({ length: roll.rarity === 'legendary' ? 22 : roll.rarity === 'epic' ? 16 : 11 }, () => {
+      Array.from({ length: roll.rarity === 'treasure' ? 30 : roll.rarity === 'legendary' ? 22 : roll.rarity === 'epic' ? 16 : 11 }, () => {
         const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.3;
         const dist = 90 + Math.random() * 90;
         return { dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist, delay: Math.random() * 0.15, size: 18 + Math.random() * 14 };
@@ -70,7 +77,7 @@ export function Chest({ roll, totalAfter, onOpened }: { roll: ChestRoll; totalAf
       const last = i === FLICKER_GAPS.length - 1;
       later(t, () => {
         // Cycle through the rarities, landing on the real one at the end.
-        setFlicker(last ? roll.rarity : RARITIES[(i + Math.floor(Math.random() * 3)) % RARITIES.length]);
+        setFlicker(last ? roll.rarity : FLICKER[(i + Math.floor(Math.random() * 3)) % FLICKER.length]);
         sfx.tick(i);
       });
     });
@@ -116,6 +123,19 @@ export function Chest({ roll, totalAfter, onOpened }: { roll: ChestRoll; totalAf
             <div className="chest-rarity">{RARITY_STYLE[roll.rarity].label}</div>
             <div className="chest-gems">+{shown} 💎</div>
             {roll.freeze && <div className="chest-bonus">+ a streak freeze 🧊</div>}
+            {treasure && (
+              <div className="chest-treasure">
+                <Dragon
+                  size={96}
+                  mood="cheer"
+                  skin={treasure.kind === 'skin' ? treasure.id : undefined}
+                  outfit={treasure.kind === 'accessory' ? { [treasure.slot]: treasure.id } : {}}
+                />
+                <div>
+                  You found the <strong>{treasure.name}</strong>! It can't be bought: only found. Try it on in the shop.
+                </div>
+              </div>
+            )}
             <div className="chest-total">You have {totalAfter - roll.gems + shown} gems</div>
           </>
         )}

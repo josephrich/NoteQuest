@@ -182,6 +182,8 @@ export interface ChordEvent extends ChordCheck {
   close: boolean;
   // The right notes, but with a different note at the bottom: an inversion.
   inverted: boolean;
+  // When it was recognised as one of the above: the notes that were played (MIDI numbers).
+  played: number[] | null;
 }
 
 // Checks what's sounding against the expected chord, from the average spectrum of the last few
@@ -259,7 +261,7 @@ export class ChordTracker {
     if (res.pass) {
       this.state = 'idle';
       this.lastMiss = null;
-      return { ...res, onsetT: this.attemptT, t, matched: null, close: false, inverted: false };
+      return { ...res, onsetT: this.attemptT, t, matched: null, close: false, inverted: false, played: this.target };
     }
     // Only give up on a sound that has had time to settle since its latest attack.
     if (this.state === 'watching' || t - this.attemptT < this.giveUpMs || t - this.lastOnsetT < this.decideAfterMs) return null;
@@ -271,11 +273,12 @@ export class ChordTracker {
     if (same) return null;
     // What else it might be. Inversions are checked strictly (every note heard for itself); other
     // chords and near misses more loosely, since they're only for saying what he played.
-    const inverted = inversions(this.target).some((c) => check(c).pass);
+    const inversion = inversions(this.target).find((c) => check(c).pass);
     const loose = (midis: number[]) => verifyChord(avg, this.sampleRate, this.fftSize, midis, { refA4: this.refA4, strict: false }).pass;
-    const found = inverted ? -1 : this.alternatives.findIndex(loose);
-    const close = !inverted && found < 0 && nearMisses(this.target).some(loose);
-    return { ...res, onsetT: this.attemptT, t, matched: found >= 0 ? found : null, close, inverted };
+    const found = inversion ? -1 : this.alternatives.findIndex(loose);
+    const near = !inversion && found < 0 ? nearMisses(this.target).find(loose) : undefined;
+    const played = inversion ?? (found >= 0 ? this.alternatives[found] : near) ?? null;
+    return { ...res, onsetT: this.attemptT, t, matched: found >= 0 ? found : null, close: near !== undefined, inverted: inversion !== undefined, played };
   }
 }
 

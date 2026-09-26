@@ -44,7 +44,7 @@ function PictureView({ picture, played = 0, ghost, current }: { picture: Picture
     <Staff
       clef={picture.clef}
       groups={picture.notes.map((n) => n.split(' ').map(parseNote))}
-      ghosts={ghost ? picture.notes.map((_, i) => (i === ghost.at ? ghost.note : undefined)) : undefined}
+      ghosts={ghost ? picture.notes.map((_, i) => (i === ghost.at ? [ghost.note] : undefined)) : undefined}
       ghostColor={GHOST_COLOR}
       current={current}
       labels={picture.labels}
@@ -86,7 +86,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
       // Half XP on the on-screen piano, as in lessons.
       xp: Math.ceil((first ? GUIDE_XP.first : GUIDE_XP.again) / (onScreen ? 2 : 1)),
       onScreen,
-      chest: first ? rollChest({ perfect: false, commonStreak: progress.commonChests }) : null,
+      chest: first ? rollChest({ perfect: false, commonStreak: progress.commonChests, owned: progress.shop.owned }) : null,
       ms: activeMs.current,
       accuracy: 1,
       answers: [],

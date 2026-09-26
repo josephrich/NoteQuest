@@ -674,7 +674,7 @@ export const GUIDES: Record<string, Guide> = {
         kind: 'read',
         text: 'C to E is 4 semitones. That is a major 3rd.',
         picture: { clef: 'treble', notes: ['C4 E4'], labels: ['major 3rd'] },
-        keys: { notes: ['C4', 'E4'], labels: ['C', 'E'] },
+        keys: { notes: ['C4', 'E4'] },
         sound: ['C4 E4'],
       },
       {
@@ -687,7 +687,7 @@ export const GUIDES: Record<string, Guide> = {
         kind: 'read',
         text: 'D to F is only 3 semitones. That is a minor 3rd.',
         picture: { clef: 'treble', notes: ['D4 F4'], labels: ['minor 3rd'] },
-        keys: { notes: ['D4', 'F4'], labels: ['D', 'F'] },
+        keys: { notes: ['D4', 'F4'] },
         sound: ['D4 F4'],
       },
       {

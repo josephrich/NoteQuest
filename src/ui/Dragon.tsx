@@ -22,6 +22,9 @@ export const PALETTES: Record<string, Palette> = {
   purple: { body: '#9b72ff', bodyDark: '#7250e0', snout: '#c3aaff', wingInner: '#d0bfff', ...BELLY },
   gold: { body: '#ffc233', bodyDark: '#e09a12', snout: '#ffe08a', wingInner: '#ffe39a', belly: '#fff4cc', bellyLine: '#f2d27a' },
   night: { body: '#3b4a78', bodyDark: '#26315a', snout: '#5d6fa8', wingInner: '#7f8fcf', belly: '#b9c4ff', bellyLine: '#8f9de6' },
+  // Treasures (found only in chests).
+  crystal: { body: '#8ee6f2', bodyDark: '#4fb8d6', snout: '#c9f6ff', wingInner: '#e6fbff', belly: '#ffffff', bellyLine: '#bfe9f5' },
+  ember: { body: '#ff7a2f', bodyDark: '#c9361c', snout: '#ffb36b', wingInner: '#ffd24d', belly: '#ffe38a', bellyLine: '#ffb52e' },
 };
 
 const INK = '#2b2340';
@@ -108,6 +111,26 @@ export const ACCESSORY_ART: Record<string, ReactElement> = {
     <g>
       <path d="M100 122 L83 111 L83 133 Z M100 122 L117 111 L117 133 Z" fill="#ff5d8f" />
       <circle cx="100" cy="122" r="5.5" fill="#d93a6a" />
+    </g>
+  ),
+  halo: (
+    <g>
+      <ellipse cx="100" cy="8" rx="30" ry="8" fill="none" stroke="#ffd84d" strokeWidth="6" />
+      <ellipse cx="100" cy="8" rx="30" ry="8" fill="none" stroke="#fff6c2" strokeWidth="2" />
+    </g>
+  ),
+  starshades: (
+    <g>
+      <path d="M80 56 l5 10 11 1.5 -8 7.5 2 11 -10 -5.5 -10 5.5 2 -11 -8 -7.5 11 -1.5z" fill="#ff5dd8" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M120 56 l5 10 11 1.5 -8 7.5 2 11 -10 -5.5 -10 5.5 2 -11 -8 -7.5 11 -1.5z" fill="#ff5dd8" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M94 70 H106" stroke={INK} strokeWidth="3.5" />
+    </g>
+  ),
+  medal: (
+    <g>
+      <path d="M88 112 L100 132 L112 112" stroke="#4a7dff" strokeWidth="7" fill="none" strokeLinejoin="round" />
+      <circle cx="100" cy="138" r="11" fill="#ffc542" stroke="#e0a526" strokeWidth="2.5" />
+      <path d="M100 131 l2.4 5 5.4 0.7 -4 3.7 1 5.3 -4.8 -2.6 -4.8 2.6 1 -5.3 -4 -3.7 5.4 -0.7z" fill="#fff4cc" />
     </g>
   ),
   scarf: (

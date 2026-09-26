@@ -12,6 +12,9 @@ export const LIGHTNING_MS = { name: 1500, interval: 2000, chordName: 2000, play:
 // Wrong tries before the answer is shown; a hint appears one try before that.
 export const MAX_PLAY_TRIES = 4;
 export const HINT_AFTER = MAX_PLAY_TRIES - 1;
+// In a run of notes, more goes on each note before it's shown and the run moves on (the hint still
+// comes after HINT_AFTER misses).
+export const RUN_TRIES = 6;
 const MAX_REQUEUES = 3;
 // Time counted towards the daily goal per challenge is capped, so wandering off doesn't count.
 const MAX_ACTIVE_MS = 30_000;
@@ -35,15 +38,19 @@ export interface Feedback {
   revealed?: ItemId;
   // The note played, for showing where it sits (MIDI number).
   midi?: number;
+  // For a chord: the notes played, when known.
+  chordPlayed?: number[];
 }
 
 // What was heard (or pressed on screen) when a chord was asked for.
 export interface ChordAttempt {
   correct: boolean;
-  // Another chord it was recognised as, e.g. "the F chord".
+  // Another chord it was recognised as, e.g. "D minor".
   heard?: string;
   close?: boolean;
   inverted?: boolean;
+  // The notes played, when known (MIDI numbers).
+  played?: number[];
 }
 
 export class LessonRun {
@@ -139,7 +146,7 @@ export class LessonRun {
     const c = this.current;
     if (!c.chord || c.kind === 'name') return null;
     if (c.kind === 'meet') return attempt.correct ? this.succeed(t, 0, false) : null;
-    const miss = { heard: attempt.heard, close: attempt.close, inverted: attempt.inverted };
+    const miss = { heard: attempt.heard, close: attempt.close, inverted: attempt.inverted, chordPlayed: attempt.played };
     if (c.kind === 'play') return this.judgePlay(attempt.correct, miss, t);
     return this.judgeBurst(attempt.correct, miss, t);
   }
@@ -189,14 +196,14 @@ export class LessonRun {
 
   // Totals for the results screen and for saving progress, including the chest's prize.
   // `commonStreak` is how many plain chests he has had in a row.
-  outcome(commonStreak: number): LessonOutcome & { perfect: boolean; bestCombo: number } {
+  outcome(commonStreak: number, owned: string[] = []): LessonOutcome & { perfect: boolean; bestCombo: number } {
     const perfect = this.scored > 0 && this.scoredCorrect === this.scored;
     const bonus = this.scaled(XP.complete + (perfect ? XP.perfect : 0));
     return {
       lessonId: this.lessonId,
       xp: this.xp + bonus,
       onScreen: this.onScreen,
-      chest: rollChest({ perfect, commonStreak }, this.rnd),
+      chest: rollChest({ perfect, commonStreak, owned }, this.rnd),
       ms: this.activeMs,
       accuracy: this.accuracy,
       answers: this.answers,
@@ -253,7 +260,7 @@ export class LessonRun {
     this.tries++;
     this.breakCombo();
     this.feedback = { correct: false, xp: 0, lightning: false, comboBonus: false, ...miss };
-    if (this.tries < MAX_PLAY_TRIES) return this.feedback;
+    if (this.tries < RUN_TRIES) return this.feedback;
     // Too many misses on this one: show it and move on to the next, rather than getting stuck.
     const revealed = c.items[this.step];
     this.record(statItem(c, this.step), false, null);

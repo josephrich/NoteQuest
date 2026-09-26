@@ -148,6 +148,7 @@ export class Listener {
       matched: pass || inverted || matched < 0 ? null : matched,
       close: !pass && !inverted && matched < 0,
       inverted,
+      played: midis,
     };
     this.chordSubs.forEach((fn) => fn(ev));
   }

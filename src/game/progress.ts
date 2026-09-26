@@ -183,6 +183,8 @@ export function finishLesson(p: Progress, outcome: LessonOutcome, now: Date): Fi
       ...p,
       xp: p.xp + xp,
       gems: p.gems + (outcome.chest?.gems ?? 0),
+      // A dragon treasure from the chest is his to wear.
+      shop: outcome.chest?.item && !p.shop.owned.includes(outcome.chest.item) ? { ...p.shop, owned: [...p.shop.owned, outcome.chest.item] } : p.shop,
       commonChests: !outcome.chest ? p.commonChests : outcome.chest.rarity === 'common' ? p.commonChests + 1 : 0,
       days: { ...p.days, [key]: day },
       streak,

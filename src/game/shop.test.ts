@@ -125,3 +125,12 @@ describe('starter dragon', () => {
     expect(starterShop('gold', 'crown')).toEqual({ owned: ['green'], skin: 'green', outfit: {} });
   });
 });
+
+test('dragon treasures can be worn once found, but never bought', async () => {
+  const { buyItem, equip, TREASURES } = await import('./shop');
+  const { initialProgress } = await import('./progress');
+  const rich = { ...initialProgress(), gems: 5000 };
+  for (const t of TREASURES) expect(buyItem(rich, t.id).ok).toBe(false);
+  const found = { ...rich, shop: { ...rich.shop, owned: [...rich.shop.owned, 'crystal'] } };
+  expect(equip(found, 'crystal').shop.skin).toBe('crystal');
+});

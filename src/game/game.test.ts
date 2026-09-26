@@ -247,7 +247,7 @@ describe('progress and streaks', () => {
 describe('treasure chests', () => {
   const tally = (perfect: boolean, n = 10_000) => {
     const rnd = seededRandom(42);
-    const counts: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    const counts: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0, treasure: 0 };
     let gems = 0;
     let common = 0;
     let longestCommonRun = 0;
@@ -283,11 +283,27 @@ describe('treasure chests', () => {
     const rnd = seededRandom(7);
     for (let i = 0; i < 2000; i++) {
       const c = rollChest({ perfect: false, commonStreak: 0 }, rnd);
-      const [lo, hi] = { common: [5, 12], rare: [15, 25], epic: [30, 50], legendary: [100, 100] }[c.rarity];
+      const [lo, hi] = { common: [5, 12], rare: [15, 25], epic: [30, 50], legendary: [100, 100], treasure: [150, 150] }[c.rarity];
       expect(c.gems).toBeGreaterThanOrEqual(lo);
       expect(c.gems).toBeLessThanOrEqual(hi);
       expect(c.freeze).toBe(c.rarity === 'legendary');
     }
+  });
+
+  test('dragon treasures are very rare, never repeat, and are saved as owned', () => {
+    const { counts } = tally(false, 20_000);
+    expect(counts.treasure / 20_000).toBeGreaterThan(0.005);
+    expect(counts.treasure / 20_000).toBeLessThan(0.02);
+    expect(counts.treasure).toBeLessThan(counts.legendary);
+    // Always one he hasn't found yet; once he has them all, gems instead.
+    const rnd = () => 0.001;
+    expect(rollChest({ perfect: false, commonStreak: 0, owned: ['crystal', 'ember', 'halo', 'starshades'] }, rnd)).toMatchObject({ rarity: 'treasure', item: 'medal' });
+    const allFound = rollChest({ perfect: false, commonStreak: 0, owned: ['crystal', 'ember', 'halo', 'starshades', 'medal'] }, rnd);
+    expect(allFound).toMatchObject({ rarity: 'treasure', gems: 300 });
+    expect(allFound.item).toBeUndefined();
+    const p = finishLesson(initialProgress(), { lessonId: 'treble-1', xp: 10, ms: 1000, accuracy: 1, answers: [], chest: { rarity: 'treasure', gems: 150, freeze: false, item: 'halo' } }, at('2026-09-24')).progress;
+    expect(p.shop.owned).toContain('halo');
+    expect(p.gems).toBe(150);
   });
 
   test('chest gems, the pity counter and legendary freezes are saved', () => {

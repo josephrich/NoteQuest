@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { UNITS, findLesson, itemMidi, itemName, noteTip, plainItem } from './content';
 import { buildLesson, challengeAnswer, nameOptions, statItem } from './lesson';
-import { LessonRun, MAX_PLAY_TRIES } from './run';
+import { LessonRun, RUN_TRIES } from './run';
 import { seededRandom } from '../engine/test-synth';
 
 describe('sharps, flats and naturals', () => {
@@ -58,16 +58,16 @@ describe('sharps, flats and naturals', () => {
 });
 
 describe('runs of notes', () => {
-  test('after four misses on one note it is shown and the run moves on; the notes he got still count', () => {
+  test('after six misses on one note it is shown and the run moves on; the notes he got still count', () => {
     const run = new LessonRun('x', [{ kind: 'burst', items: ['treble:C4', 'treble:E4', 'treble:G4'] }], 0);
     run.play(60, 100);
-    for (let i = 0; i < MAX_PLAY_TRIES - 1; i++) expect(run.play(62, 200 + i)?.revealed).toBeUndefined();
+    for (let i = 0; i < RUN_TRIES - 1; i++) expect(run.play(62, 200 + i)?.revealed).toBeUndefined();
     expect(run.play(62, 300)).toMatchObject({ correct: false, revealed: 'treble:E4' });
     expect(run.phase).toBe('asking');
     expect(run.expected).toBe('treble:G4');
     expect(run.stepResults).toEqual([true, false]);
     // And on the last note, the run ends with the answer shown.
-    for (let i = 0; i < MAX_PLAY_TRIES; i++) run.play(69, 400 + i);
+    for (let i = 0; i < RUN_TRIES; i++) run.play(69, 400 + i);
     expect(run.phase).toBe('reveal');
     expect(run.xp).toBe(1);
     expect(run.outcome(0).answers.map((a) => [a.id, a.correct])).toEqual([

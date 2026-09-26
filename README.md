@@ -62,8 +62,19 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   The Daily Review follows the same level and, once he knows them, mixes in interval melodies and
   chords. Lessons that bring in notes he hasn't met yet stay a step gentler.
 - **Four tries**: a wrong note can be tried again. After 3 misses a hint appears; after 4 the answer
-  is shown and the lesson moves on. In a run of notes, the note he's stuck on is shown after 4
-  misses and the run carries on from the next one.
+  is shown and the lesson moves on. In a run of notes he gets 6 goes at each note (hint after 3)
+  before it's shown and the run carries on from the next one.
+- **Having another go**: every results screen offers "Practise this lesson again". Below 70%
+  accuracy it's gentler and more direct: "Good effort!", a note that it was a tricky one and which
+  notes were trickiest, and "Try it again" as the main button (Continue is still there).
+- **Chords, seen**: after a wrong chord (on the on-screen piano, or when the microphone has
+  identified what was played), the notes he got right turn green and the wrong ones show in grey.
+- **Dragon treasures**: about 1 chest in 100 (1 in 60 after a perfect lesson) is a treasure chest
+  with a dragon item that can't be bought (Crystal and Ember colours, a golden halo, star glasses,
+  a champion medal) plus 150 gems. Never the same one twice; once all are found it's 300 gems. The
+  shop shows them as "???" until found, and the odds are listed with the other chests.
+- **Fits the screen**: lessons, mini-lessons and results fit on one iPad screen with no scrolling,
+  in portrait and landscape (side by side in landscape).
 - **Mini-lessons** (📖 on the path): 20 short explainers placed just before the lessons that need
   them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
   spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, semitones, sharps, flats and

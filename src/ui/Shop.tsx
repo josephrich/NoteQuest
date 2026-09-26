@@ -4,7 +4,7 @@ import { Dragon } from './Dragon';
 import { useProgress } from './store';
 import { sfx, unlockSound } from './sound';
 import { RARITY_STYLE } from './Chest';
-import { ACCESSORIES, SKINS, FREEZE_PRICE, MAX_FREEZES, buyFreeze, buyItem, claimPrize, equip, type CatalogItem, type ShopResult } from '../game/shop';
+import { ACCESSORIES, SKINS, TREASURES, FREEZE_PRICE, MAX_FREEZES, buyFreeze, buyItem, claimPrize, equip, type CatalogItem, type ShopResult } from '../game/shop';
 import { CHEST_ODDS } from '../game/rewards';
 import type { Screen } from './App';
 
@@ -123,6 +123,21 @@ export function Shop({ go }: { go: (s: Screen) => void }) {
           <div className="shop-grid">{SKINS.map(renderItem)}</div>
           <h2 className="shop-section">Accessories</h2>
           <div className="shop-grid">{ACCESSORIES.map(renderItem)}</div>
+          <h2 className="shop-section">Dragon treasures</h2>
+          <p className="shop-empty">Very rare! Found only in treasure chests, never sold.</p>
+          <div className="shop-grid">
+            {TREASURES.map((item) =>
+              shop.owned.includes(item.id) ? (
+                renderItem(item)
+              ) : (
+                <div key={item.id} className="shop-item treasure-locked" aria-label="A treasure not found yet">
+                  <span className="treasure-mystery">✨❓</span>
+                  <span className="shop-item-name">???</span>
+                  <span className="shop-item-state">Not found yet</span>
+                </div>
+              ),
+            )}
+          </div>
         </>
       )}
 

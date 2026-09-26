@@ -144,3 +144,17 @@ test('inversions are not accepted: the bottom note has to be right too', () => {
     }
   }
 }, 120_000);
+
+test('a recognised miss reports the notes actually played, for showing them on the staff', () => {
+  const key = (c: number[] | null) => (c ? [...c].sort((a, b) => a - b).join() : 'none');
+  const cases = [
+    { expected: [60, 64, 67], played: [60, 64, 69], others: [] as number[][] }, // one finger off
+    { expected: [60, 64, 67], played: [64, 67, 72], others: [] }, // an inversion
+    { expected: [62, 65, 69], played: [62, 66, 69], others: [[62, 66, 69]] }, // D major for D minor
+  ];
+  for (const { expected, played: p, others } of cases) {
+    const evs = listen(played(p), expected, others);
+    const last = evs[evs.length - 1];
+    assert.equal(key(last?.played ?? null), key(p), `${name(p)} for ${name(expected)} reported as ${key(last?.played ?? null)}`);
+  }
+}, 60_000);

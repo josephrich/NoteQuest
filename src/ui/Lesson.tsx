@@ -32,7 +32,7 @@ import {
 } from '../game/content';
 import { buildLesson, challengeAnswer, tapped as isTapChallenge, type Challenge, type ItemStat } from '../game/lesson';
 import { REVIEW_COLOR, REVIEW_ID, REVIEW_TITLE, buildReview, learnedChords } from '../game/review';
-import { HINT_AFTER, LessonRun, type Feedback } from '../game/run';
+import { HINT_AFTER, LessonRun, midiLetter, type Feedback } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { listener } from '../engine/listener';
 import type { Screen } from './App';
@@ -48,6 +48,16 @@ function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boo
   if (lessonId === REVIEW_ID) return { title: REVIEW_TITLE, color: REVIEW_COLOR, challenges: buildReview(stats, { mic }), chords: learnedChords(stats) };
   const { unit, lesson } = findLesson(lessonId);
   return { title: lesson.title, color: unit.color, challenges: buildLesson(lesson, stats, { mic }), chords: lesson.chords?.roots ?? [] };
+}
+
+// The items missed most in a lesson, up to three.
+function mostMissed(answers: { id: ItemId; correct: boolean }[]): ItemId[] {
+  const misses = new Map<ItemId, number>();
+  for (const a of answers) if (!a.correct) misses.set(a.id, (misses.get(a.id) ?? 0) + 1);
+  return [...misses.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([id]) => id);
 }
 
 const chordMidis = (root: ItemId) => triad(root).map(itemMidi);
@@ -74,7 +84,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
   const listening = mic && run.phase === 'asking' && c && !tapToAnswer;
 
   const finish = () => {
-    const outcome = run.outcome(progress.commonChests);
+    const outcome = run.outcome(progress.commonChests, progress.shop.owned);
     const result = finishLesson(progress, outcome, new Date());
     update(() => result.progress);
     sfx.complete();
@@ -96,6 +106,8 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       goalReachedNow: result.goalReachedNow,
       freezeEarned: result.freezeEarned,
       freezesUsed: result.freezesUsed,
+      again: { lessonId, mic, screen: onScreen },
+      tricky: mostMissed(outcome.answers),
     };
     go({ name: 'results', data });
   };
@@ -158,7 +170,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
         if (ev.matched === null && !ev.close && !ev.inverted) return;
         react(
           run.playChord(
-            { correct: false, heard: ev.matched !== null ? chordName(others[ev.matched]) : undefined, close: ev.close, inverted: ev.inverted },
+            { correct: false, heard: ev.matched !== null ? chordName(others[ev.matched]) : undefined, close: ev.close, inverted: ev.inverted, played: ev.played ?? undefined },
             ev.onsetT,
           ),
         );
@@ -181,7 +193,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
     const inverted = !correct && letters(keys) === letters(target) && Math.min(...keys) % 12 !== Math.min(...target) % 12;
     const close = !correct && !other && !inverted && target.filter((m) => keys.includes(m)).length === 2;
     window.setTimeout(() => setPicked([]), 450);
-    react(run.playChord({ correct, heard: other ? chordName(other) : undefined, close, inverted }, performance.now()));
+    react(run.playChord({ correct, heard: other ? chordName(other) : undefined, close, inverted, played: keys }, performance.now()));
   };
 
   useEffect(() => {
@@ -247,7 +259,16 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
   // Where the wrong note he played sits, drawn faintly in the column of the note he's on.
   const ghostMidi = !c.chord && wrong?.midi !== undefined && !wrong.revealed && (run.phase === 'asking' || run.phase === 'reveal') ? wrong.midi : undefined;
   const ghostShown = ghostMidi !== undefined && inReach(clef, ghostMidi);
-  const ghosts = ghostShown ? c.items.map((_, i) => (i === Math.min(run.step, c.items.length - 1) ? ghostNote(ghostMidi, wrong!.heard) : undefined)) : undefined;
+  const at = Math.min(run.step, c.items.length - 1);
+  // A chord he got partly right: its right notes in green, and the wrong ones he played in grey.
+  const chordMiss = c.chord && wrong?.chordPlayed && run.phase === 'asking' && !wrong.revealed ? wrong.chordPlayed : undefined;
+  const chordGhosts = chordMiss?.filter((m) => !target.includes(m) && inReach(clef, m)).map((m) => ghostNote(m, midiLetter(m)));
+  const ghosts = ghostShown
+    ? c.items.map((_, i) => (i === at ? [ghostNote(ghostMidi, wrong!.heard)] : undefined))
+    : chordGhosts?.length
+      ? c.items.map((_, i) => (i === at ? chordGhosts : undefined))
+      : undefined;
+  const keyColors = chordMiss ? c.items.map((_, i) => (i === at ? target.map((m) => (chordMiss.includes(m) ? COLORS.done : undefined)) : undefined)) : undefined;
   const wrongLine = !wrong
     ? ''
     : wrong.revealed
@@ -255,11 +276,15 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       : wrong.inverted
         ? `Right notes, wrong order! ${n1} goes at the bottom.`
         : wrong.close
-          ? 'Close! One note is off. Check all three.'
+          ? chordGhosts?.length
+            ? 'Close! The green notes are right. Fix the grey one.'
+            : 'Close! One note is off. Check all three.'
           : c.chord
             ? wrong.heard
               ? `That was ${wrong.heard}. ${wrong.heard.split(' ')[0] === n1 ? 'Check the 3rd.' : 'Look at the bottom note.'}`
-              : `Not quite. ${encourage()}`
+              : chordGhosts?.length
+                ? 'Not quite. The green notes are right; the grey ones need fixing.'
+                : `Not quite. ${encourage()}`
             : ghostMidi !== undefined
               ? ghostLine(clef, ghostMidi, itemMidi(expected), wrong.heard ?? '')
               : `Not quite. ${encourage()}`;
@@ -298,6 +323,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             colors={colors}
             ghosts={ghosts}
             ghostColor={GHOST_COLOR}
+            keyColors={keyColors}
             current={stepwise && run.phase === 'asking' ? Math.min(run.step, c.items.length - 1) : undefined}
             label={c.items.length > 1 ? `${c.items.length} ${c.chord ? 'chords' : 'notes'}` : c.chord ? chordName(expected) : `${answer}`}
           />

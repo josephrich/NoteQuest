@@ -73,8 +73,14 @@ export const sfx = {
     blip(C8, 0, 0.03, 0.025);
   },
   // Fanfare that gets longer for rarer chests.
-  reveal(rarity: 'common' | 'rare' | 'epic' | 'legendary') {
-    const notes = { common: [G7, C8], rare: [E7, G7, C8], epic: [E7, G7, B7, C8, B7, C8], legendary: [E7, G7, B7, C8, G7, B7, C8, C8] }[rarity];
+  reveal(rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'treasure') {
+    const notes = {
+      common: [G7, C8],
+      rare: [E7, G7, C8],
+      epic: [E7, G7, B7, C8, B7, C8],
+      legendary: [E7, G7, B7, C8, G7, B7, C8, C8],
+      treasure: [E7, G7, B7, C8, E7, G7, B7, C8, G7, B7, C8, C8],
+    }[rarity];
     notes.forEach((f, i) => blip(f, i * 0.09, i === notes.length - 1 ? 0.35 : 0.12, 0.05));
   },
 };
