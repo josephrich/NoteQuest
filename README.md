@@ -29,13 +29,14 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   plays a pair when told only the first note, and plays short melodies built from the jumps he
   knows.
 - **Sharps, flats and naturals** (Unit 6): semitones and tones first (on the keyboard, including
-  the E–F and B–C semitones), then sharps (F♯, C♯), flats (B♭, E♭, and one black key having two
-  names), naturals, and the same in the bass clef. When naming a note, the choices always include
+  the E–F and B–C semitones), then sharps (F♯, C♯, then G♯, D♯), flats (B♭, E♭, then A♭, D♭, and
+  one black key having two names), naturals, sharps and flats mixed, and the same in the bass clef. When naming a note, the choices always include
   the same letter with and without its sign, so the sign is what's being read.
 - **Chords** (Unit 7), taught through what makes them sound the way they do rather than by rote:
   - Stacking: root, 3rd and 5th, line-line-line or space-space-space. C, F and G major.
   - Major and minor 3rds: a 3rd comes in two sizes, 4 semitones (major, bright) or 3 (minor,
-    darker). A lesson of telling them apart by counting semitones, and playing them.
+    darker). The mini-lesson counts each key from the start note, one 3rd at a time. In the lesson,
+    each question shows the two keys on a keyboard to count on.
   - Major and minor chords: happy and sad by ear first, then why: a major chord has a major 3rd from
     the root, a minor chord a minor 3rd. A, D and E minor.
   - Making major chords: raise the 3rd a semitone. D, A and E major (with F♯, C♯, G♯), heard
@@ -49,8 +50,12 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   on-screen piano he taps the three keys one at a time. 🔊 Hear it buttons play each chord shown,
   in order.
 - **Seeing a wrong note**: when he plays the wrong note, it's drawn faintly in grey on the staff next
-  to the right one, with "Go higher" or "Go lower". A note far off the staff just says it was way too
-  high or low.
+  to the right one, with "Go higher" or "Go lower", in lessons and in mini-lesson "play" cards. A
+  note far off the staff just says it was way too high or low.
+- **Which note now**: in a run of notes, the one to play is marked by a soft band behind it and an
+  arrow under it, so a missed (orange) note doesn't look like the one to play.
+- **Where am I**: a small "Unit 6 · Lesson 3 of 8" (or "Mini-lesson") line on the lesson sheet and
+  under the progress bar.
 - **Gets harder as he gets better**: a reading level goes up with the number of notes he reads
   quickly and accurately (8 notes for level 1, 18 for level 2). As it rises, lessons have more runs
   of notes and longer ones: runs of 3, then 4, then 5 notes, and interval melodies of 4, 5, then 6.

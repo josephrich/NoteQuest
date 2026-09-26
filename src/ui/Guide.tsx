@@ -13,11 +13,12 @@ import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise } from './lines';
 import { GUIDES, type GuideCard, type Picture } from '../game/guides';
-import { findLesson } from '../game/content';
-import { HINT_AFTER } from '../game/run';
+import { findLesson, lessonPosition } from '../game/content';
+import { HINT_AFTER, midiLetter } from '../game/run';
 import { finishLesson } from '../game/progress';
 import { rollChest } from '../game/rewards';
-import { midiName, noteName, parseNote, toMidi } from '../engine/music';
+import { noteName, parseNote, toMidi, type Note } from '../engine/music';
+import { GHOST_COLOR, ghostLine, ghostNote, inReach } from './ghost';
 import { listener } from '../engine/listener';
 import type { Screen } from './App';
 import type { ResultsData } from './Results';
@@ -29,7 +30,8 @@ const IGNORE_BEFORE_MS = 150;
 const GUIDE_XP = { first: 10, again: 3 };
 const MAX_CARD_MS = 30_000;
 
-function PictureView({ picture, played = 0 }: { picture: Picture; played?: number }) {
+// `ghost`: a wrong note to draw faintly in column `at`. `current`: the note to play now, in a run.
+function PictureView({ picture, played = 0, ghost, current }: { picture: Picture; played?: number; ghost?: { at: number; note: Note }; current?: number }) {
   const colors = (n: number) =>
     Array.from({ length: n }, (_, i) => (i < played ? DONE : picture.highlight?.includes(i) ? HIGHLIGHT : undefined));
   if (picture.clef === 'grand') {
@@ -42,6 +44,9 @@ function PictureView({ picture, played = 0 }: { picture: Picture; played?: numbe
     <Staff
       clef={picture.clef}
       groups={picture.notes.map((n) => n.split(' ').map(parseNote))}
+      ghosts={ghost ? picture.notes.map((_, i) => (i === ghost.at ? ghost.note : undefined)) : undefined}
+      ghostColor={GHOST_COLOR}
+      current={current}
       labels={picture.labels}
       colors={colors(picture.notes.length)}
       label={picture.notes.join(', ')}
@@ -49,7 +54,6 @@ function PictureView({ picture, played = 0 }: { picture: Picture; played?: numbe
   );
 }
 
-const letterOf = (midi: number) => midiName(midi).replace(/-?\d+$/, '').replace('#', '♯');
 const modeOf = (card: GuideCard, onScreen: boolean): Mode =>
   card.kind === 'quiz' ? 'tap' : card.kind === 'play' ? (onScreen ? 'screen' : 'play') : 'learn';
 
@@ -63,7 +67,8 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
   // For a play card: how many of its notes have been played, and the wrong notes heard.
   const [played, setPlayed] = useState(0);
   const [misses, setMisses] = useState(0);
-  const [heard, setHeard] = useState<string | null>(null);
+  // The wrong note last played on a play card, to show where it sits.
+  const [heard, setHeard] = useState<number | null>(null);
   const [done, setDone] = useState(false);
   const shownAt = useRef(performance.now());
   const activeMs = useRef(0);
@@ -149,7 +154,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
         sfx.correct();
       } else setPlayed(played + 1);
     } else {
-      setHeard(letterOf(midi));
+      setHeard(midi);
       setMisses((m) => m + 1);
     }
   };
@@ -175,6 +180,12 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
   };
 
   const answered = card.kind === 'quiz' ? done : card.kind === 'play' ? done : true;
+  // On a play card: the note to play now, and where a wrong one sits (single-staff pictures only).
+  const playing = card.kind === 'play' && !done;
+  const target = playing ? toMidi(parseNote(card.play[played])) : null;
+  const clefOf = card.picture?.clef === 'bass' ? 'bass' : 'treble';
+  const ghost =
+    playing && heard !== null && card.picture.clef !== 'grand' && inReach(clefOf, heard) ? { at: played, note: ghostNote(heard, midiLetter(heard)) } : undefined;
 
   return (
     <div className="guide lesson" data-mode={modeOf(card, onScreen)} style={{ ['--unit' as string]: unit.color }}>
@@ -186,6 +197,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
           <div className="bar-fill" style={{ width: `${(index / guide.cards.length) * 100}%` }} />
         </div>
       </header>
+      <div className="lesson-where">{lessonPosition(lessonId)}</div>
 
       <main className="lesson-body guide-body">
         <ModeBanner mode={modeOf(card, onScreen)} text={card.kind === 'read' ? guide.title : undefined} />
@@ -201,7 +213,7 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
             className="staff-card guide-picture"
             data-expected={card.kind === 'play' && played < card.play.length ? toMidi(parseNote(card.play[played])) : undefined}
           >
-            <PictureView picture={card.picture} played={card.kind === 'play' ? played : 0} />
+            <PictureView picture={card.picture} played={card.kind === 'play' ? played : 0} ghost={ghost} current={playing && card.play.length > 1 ? played : undefined} />
             {card.kind !== 'play' && card.keys && <Keyboard notes={card.keys.notes} labels={card.keys.labels} />}
           </div>
         )}
@@ -252,9 +264,9 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
                 <span>Listening…</span>
               </div>
             )}
-            {heard && (
+            {heard !== null && (
               <p className="try-again" role="status">
-                That was {heard}. Try again!
+                {ghostLine(clefOf, heard, target!, midiLetter(heard))}
               </p>
             )}
             {misses >= HINT_AFTER && <p className="hint">Hint: it's {noteName(parseNote(card.play[played]))}</p>}

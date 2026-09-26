@@ -303,18 +303,26 @@ export const UNITS: UnitDef[] = [
     lessons: withGuides(
       [
         { id: 'acc-1', title: 'Sharps: F♯ & C♯', pool: t('F4', 'F#4', 'C5', 'C#5', 'G4', 'D5'), newNotes: t('F#4', 'C#5') },
-        { id: 'acc-2', title: 'Flats: B♭ & E♭', pool: t('B4', 'Bb4', 'E5', 'Eb5', 'F#4', 'C#5'), newNotes: t('Bb4', 'Eb5') },
-        { id: 'acc-3', title: 'Naturals', pool: t('F#4', 'Fn4', 'Bb4', 'Bn4', 'C#5', 'Cn5', 'Eb5', 'En5'), newNotes: [] },
-        { id: 'acc-4', title: 'Sharps & flats in bass', pool: b('F3', 'F#3', 'C3', 'C#3', 'B2', 'Bb2', 'E3', 'Eb3'), newNotes: b('F#3', 'C#3', 'Bb2', 'Eb3') },
+        { id: 'acc-2', title: 'More sharps: G♯ & D♯', pool: t('G4', 'G#4', 'D5', 'D#5', 'F#4', 'C#5'), newNotes: t('G#4', 'D#5') },
+        { id: 'acc-3', title: 'Flats: B♭ & E♭', pool: t('B4', 'Bb4', 'E5', 'Eb5', 'F#4', 'C#5'), newNotes: t('Bb4', 'Eb5') },
+        { id: 'acc-4', title: 'More flats: A♭ & D♭', pool: t('A4', 'Ab4', 'D5', 'Db5', 'Bb4', 'Eb5'), newNotes: t('Ab4', 'Db5') },
+        { id: 'acc-5', title: 'Naturals', pool: t('F#4', 'Fn4', 'Bb4', 'Bn4', 'C#5', 'Cn5', 'Eb5', 'En5'), newNotes: [] },
+        {
+          id: 'acc-6',
+          title: 'Sharps & flats together',
+          pool: t('F#4', 'C#5', 'G#4', 'D#5', 'Bb4', 'Eb5', 'Ab4', 'Db5', 'F4', 'C5', 'G4', 'B4'),
+          newNotes: [],
+        },
+        { id: 'acc-7', title: 'Sharps & flats in bass', pool: b('F3', 'F#3', 'C3', 'C#3', 'B2', 'Bb2', 'E3', 'Eb3'), newNotes: b('F#3', 'C#3', 'Bb2', 'Eb3') },
         {
           id: 'acc-check',
           title: 'Sharps & flats challenge',
-          pool: [...t('F#4', 'C#5', 'Bb4', 'Eb5', 'Fn4', 'Bn4', 'G4', 'D5'), ...b('F#3', 'C#3', 'Bb2', 'Eb3', 'C3', 'E3')],
+          pool: [...t('F#4', 'C#5', 'G#4', 'Bb4', 'Eb5', 'Ab4', 'Fn4', 'Bn4', 'G4', 'D5'), ...b('F#3', 'C#3', 'Bb2', 'Eb3', 'C3', 'E3')],
           newNotes: [],
           checkpoint: true,
         },
       ],
-      { 'acc-1': 'sharps', 'acc-2': 'flats', 'acc-3': 'naturals' },
+      { 'acc-1': 'sharps', 'acc-3': 'flats', 'acc-5': 'naturals' },
       { 'acc-1': 'semitones' },
     ),
   },
@@ -431,6 +439,15 @@ export function findLesson(lessonId: string): { unit: UnitDef; lesson: LessonDef
     if (index >= 0) return { unit, lesson: unit.lessons[index], index };
   }
   throw new Error(`unknown lesson ${lessonId}`);
+}
+
+// Where a lesson sits, for a small "Unit 6 · Lesson 3 of 8" label. Mini-lessons aren't numbered.
+export function lessonPosition(lessonId: string): string {
+  const { unit, lesson } = findLesson(lessonId);
+  const u = UNITS.indexOf(unit) + 1;
+  if (lesson.guide) return `Unit ${u} · Mini-lesson`;
+  const practice = unit.lessons.filter((l) => !l.guide);
+  return `Unit ${u} · Lesson ${practice.indexOf(lesson) + 1} of ${practice.length}`;
 }
 
 // The Daily Review isn't part of the course path; it is built fresh from learned notes (see review.ts).

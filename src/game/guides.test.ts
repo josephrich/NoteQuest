@@ -25,8 +25,8 @@ describe('guides', () => {
     expect(before('chords')).toBe('chords-1');
     expect(before('semitones')).toBe('guide-sharps');
     expect(before('sharps')).toBe('acc-1');
-    expect(before('flats')).toBe('acc-2');
-    expect(before('naturals')).toBe('acc-3');
+    expect(before('flats')).toBe('acc-3');
+    expect(before('naturals')).toBe('acc-5');
     expect(before('thirds')).toBe('chords-2');
     expect(before('major-minor')).toBe('chords-3');
     expect(before('make-major')).toBe('chords-4');

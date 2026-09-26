@@ -329,6 +329,6 @@ export class LessonRun {
 
 const LETTER_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 
-function midiLetter(midi: number): string {
+export function midiLetter(midi: number): string {
   return LETTER_NAMES[((midi % 12) + 12) % 12];
 }

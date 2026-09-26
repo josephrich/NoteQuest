@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { MyDragon } from './MyDragon';
 import { useProgress } from './store';
 import { greeting } from './lines';
-import { UNITS, type LessonDef, type UnitDef } from '../game/content';
+import { UNITS, lessonPosition, type LessonDef, type UnitDef } from '../game/content';
 import { describeNew } from '../game/lesson';
 import { GUIDES } from '../game/guides';
 import { currentStreak, goalMs, isUnlocked, nextLessonId, today } from '../game/progress';
@@ -213,6 +213,7 @@ export function Home({ go }: { go: (s: Screen) => void }) {
         <div className="sheet-backdrop" onClick={() => setSelected(null)}>
           <div className="sheet" style={{ ['--unit' as string]: selected.unit.color }} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={selected.lesson.title}>
             <div className="sheet-unit">{selected.unit.title}</div>
+            <div className="sheet-where">{lessonPosition(selected.lesson.id)}</div>
             <h2>{selected.lesson.title}</h2>
             <p className="sheet-notes">
               {selected.lesson.guide

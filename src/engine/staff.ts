@@ -15,6 +15,8 @@ export interface StaffSpec {
   // sits compared with the right one.
   ghosts?: (Note | undefined)[];
   ghostColor?: string;
+  // In a run of notes, the one to play now: marked with a soft band behind it and an arrow under it.
+  current?: number;
   label: string;
 }
 
@@ -100,7 +102,35 @@ export function renderStaff(el: HTMLElement, spec: StaffSpec): void {
   const available = stave.getNoteEndX() - stave.getNoteStartX() - 20;
   new Formatter().joinVoices([voice]).format([voice], available);
   voice.draw(ctx, stave);
+  if (spec.current !== undefined && notes[spec.current]) markCurrent(el, notes[spec.current], height);
   finish(el, width, height, spec.label);
+}
+
+const CURRENT = '#7c5cff';
+
+// A soft band behind the note to play now, and an arrow pointing up at it from under the staff.
+function markCurrent(el: HTMLElement, note: StaveNote, height: number) {
+  const svg = el.querySelector('svg');
+  if (!svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const x0 = note.getNoteHeadBeginX() - 9;
+  const x1 = note.getNoteHeadEndX() + 9;
+  const band = document.createElementNS(ns, 'rect');
+  band.setAttribute('x', String(x0));
+  band.setAttribute('y', '2');
+  band.setAttribute('width', String(x1 - x0));
+  band.setAttribute('height', String(height - 22));
+  band.setAttribute('rx', '10');
+  band.setAttribute('fill', CURRENT);
+  band.setAttribute('fill-opacity', '0.12');
+  band.setAttribute('class', 'current-band');
+  svg.insertBefore(band, svg.firstChild);
+  const cx = (x0 + x1) / 2;
+  const arrow = document.createElementNS(ns, 'path');
+  arrow.setAttribute('d', `M${cx - 8} ${height - 4} L${cx} ${height - 16} L${cx + 8} ${height - 4} Z`);
+  arrow.setAttribute('fill', CURRENT);
+  arrow.setAttribute('class', 'current-arrow');
+  svg.appendChild(arrow);
 }
 
 export function renderGrandStaff(el: HTMLElement, spec: GrandSpec): void {

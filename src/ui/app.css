@@ -464,3 +464,5 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 .guide-nav { display: flex; gap: 12px; align-items: stretch; justify-content: center; width: 100%; max-width: 620px; }
 .guide-nav .btn-big { flex: 1; }
 .guide-back { flex: 0 0 auto; }
+.sheet-where { color: var(--muted); font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+.lesson-where { text-align: center; color: var(--muted); font-size: 0.8rem; font-weight: 700; margin: -6px 0 4px; letter-spacing: 0.02em; }

@@ -8,7 +8,20 @@ describe('sharps, flats and naturals', () => {
   const unit = UNITS.find((u) => u.id === 'accidentals')!;
 
   test('the unit starts with semitones, then sharps, flats and naturals', () => {
-    expect(unit.lessons.map((l) => l.id)).toEqual(['guide-semitones', 'guide-sharps', 'acc-1', 'guide-flats', 'acc-2', 'guide-naturals', 'acc-3', 'acc-4', 'acc-check']);
+    expect(unit.lessons.map((l) => l.id)).toEqual([
+      'guide-semitones',
+      'guide-sharps',
+      'acc-1',
+      'acc-2',
+      'guide-flats',
+      'acc-3',
+      'acc-4',
+      'guide-naturals',
+      'acc-5',
+      'acc-6',
+      'acc-7',
+      'acc-check',
+    ]);
   });
 
   test('notes are named with their sign, and explained as a semitone up or down', () => {
@@ -23,7 +36,7 @@ describe('sharps, flats and naturals', () => {
   });
 
   test('naming choices include the same letter with and without its sign', () => {
-    for (const id of ['acc-1', 'acc-2', 'acc-3', 'acc-4', 'acc-check']) {
+    for (const id of ['acc-1', 'acc-2', 'acc-3', 'acc-4', 'acc-5', 'acc-6', 'acc-7', 'acc-check']) {
       const lesson = findLesson(id).lesson;
       const cs = buildLesson(lesson, {}, { mic: false, rnd: seededRandom(3) }).filter((c) => c.kind === 'name');
       for (const c of cs) {
@@ -39,7 +52,7 @@ describe('sharps, flats and naturals', () => {
   test('a note written with a natural sign counts as the plain note', () => {
     expect(plainItem('treble:Fn4')).toBe('treble:F4');
     expect(statItem({ kind: 'play', items: ['treble:Fn4'] })).toBe('treble:F4');
-    const run = new LessonRun('acc-3', [{ kind: 'play', items: ['treble:Fn4'] }], 0);
+    const run = new LessonRun('acc-5', [{ kind: 'play', items: ['treble:Fn4'] }], 0);
     expect(run.play(65, 500)?.correct).toBe(true);
   });
 });
@@ -67,5 +80,15 @@ describe('runs of notes', () => {
   test('a wrong note carries the note played, for showing it on the staff', () => {
     const run = new LessonRun('x', [{ kind: 'play', items: ['treble:C5'] }], 0);
     expect(run.play(67, 100)).toMatchObject({ correct: false, midi: 67, heard: 'G' });
+  });
+});
+
+describe('where a lesson sits', () => {
+  test('practice lessons are numbered within their unit; mini-lessons are not', async () => {
+    const { lessonPosition } = await import('./content');
+    expect(lessonPosition('acc-1')).toBe('Unit 6 · Lesson 1 of 8');
+    expect(lessonPosition('acc-check')).toBe('Unit 6 · Lesson 8 of 8');
+    expect(lessonPosition('guide-sharps')).toBe('Unit 6 · Mini-lesson');
+    expect(lessonPosition('treble-1')).toBe('Unit 1 · Lesson 1 of 7');
   });
 });

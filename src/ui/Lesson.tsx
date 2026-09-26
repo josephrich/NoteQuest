@@ -4,10 +4,11 @@ import { Staff } from './Staff';
 import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
 import { Keyboard } from './Keyboard';
-import { PlayKeyboard, keyboardKeys } from './PlayKeyboard';
+import { PlayKeyboard } from './PlayKeyboard';
+import { GHOST_COLOR, ghostLine, ghostNote, inReach } from './ghost';
 import { SpeakButton } from './SpeakButton';
 import { PROMPTS } from '../voice/lines';
-import { midiName, parseNote, spell, type Note } from '../engine/music';
+import { spell } from '../engine/music';
 import { useProgress } from './store';
 import { sfx } from './sound';
 import { praise, lightning as lightningLine, encourage } from './lines';
@@ -18,6 +19,7 @@ import {
   chordTip,
   findLesson,
   intervalLabel,
+  lessonPosition,
   intervalWord,
   itemClef,
   itemName,
@@ -51,21 +53,6 @@ function lessonSetup(lessonId: string, stats: Record<string, ItemStat>, mic: boo
 const chordMidis = (root: ItemId) => triad(root).map(itemMidi);
 const sameKeys = (a: number[], b: number[]) => a.length === b.length && a.every((m) => b.includes(m));
 
-// A wrong note is drawn faintly on the staff next to where it should be, if it's within reach of
-// the staff (the on-screen keyboard's range for that clef); otherwise he's told it was way off.
-const GHOST = 'rgba(120, 110, 140, 0.45)';
-// The wrong note, spelled the way the message names it ("That was B♭").
-function ghostNote(midi: number, name?: string): Note {
-  if (!name) return parseNote(midiName(midi));
-  return parseNote(`${name.replace('♯', '#').replace('♭', 'b')}${Math.floor(midi / 12) - 1}`);
-}
-
-function inReach(clef: 'treble' | 'bass', midi: number): boolean {
-  const keys = keyboardKeys(clef);
-  return midi >= keys[0].midi && midi <= keys[keys.length - 1].midi + 1;
-}
-
-// `onScreen`: notes are played on the on-screen piano rather than heard through the microphone.
 export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId: string; mic: boolean; onScreen?: boolean; go: (s: Screen) => void }) {
   const { progress, update } = useProgress();
   const [setup] = useState(() => lessonSetup(lessonId, progress.items, mic || onScreen));
@@ -261,7 +248,6 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
   const ghostMidi = !c.chord && wrong?.midi !== undefined && !wrong.revealed && (run.phase === 'asking' || run.phase === 'reveal') ? wrong.midi : undefined;
   const ghostShown = ghostMidi !== undefined && inReach(clef, ghostMidi);
   const ghosts = ghostShown ? c.items.map((_, i) => (i === Math.min(run.step, c.items.length - 1) ? ghostNote(ghostMidi, wrong!.heard) : undefined)) : undefined;
-  const direction = ghostMidi === undefined ? '' : ghostMidi < itemMidi(expected) ? 'higher' : 'lower';
   const wrongLine = !wrong
     ? ''
     : wrong.revealed
@@ -274,11 +260,9 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             ? wrong.heard
               ? `That was ${wrong.heard}. ${wrong.heard.split(' ')[0] === n1 ? 'Check the 3rd.' : 'Look at the bottom note.'}`
               : `Not quite. ${encourage()}`
-            : ghostMidi !== undefined && !ghostShown
-              ? `That was way too ${direction === 'higher' ? 'low' : 'high'}! Look where the note sits.`
-              : wrong.octaveSlip
-                ? `Right letter, wrong octave! Go ${direction}.`
-                : `That was ${wrong.heard}${ghostShown ? ' (the grey note)' : ''}. Go ${direction}!`;
+            : ghostMidi !== undefined
+              ? ghostLine(clef, ghostMidi, itemMidi(expected), wrong.heard ?? '')
+              : `Not quite. ${encourage()}`;
 
   return (
     <div className="lesson" data-mode={mode} style={{ ['--unit' as string]: setup.color }}>
@@ -293,6 +277,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
           {run.combo >= 2 ? `🔥 ${run.combo}` : ''}
         </div>
       </header>
+      <div className="lesson-where">{lessonId === REVIEW_ID ? REVIEW_TITLE : lessonPosition(lessonId)}</div>
 
       <main className="lesson-body">
         <ModeBanner mode={mode} text={mode === 'learn' ? (c.chord ? 'New chord' : c.interval ? 'New jump' : 'New note') : undefined} />
@@ -312,11 +297,14 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             groups={c.items.map((id) => (c.chord ? triad(id) : [id]).map(itemNote))}
             colors={colors}
             ghosts={ghosts}
-            ghostColor={GHOST}
+            ghostColor={GHOST_COLOR}
+            current={stepwise && run.phase === 'asking' ? Math.min(run.step, c.items.length - 1) : undefined}
             label={c.items.length > 1 ? `${c.items.length} ${c.chord ? 'chords' : 'notes'}` : c.chord ? chordName(expected) : `${answer}`}
           />
           {c.kind === 'meet' && <div className="meet-name">{c.chord ? chordName(expected) : c.interval ? intervalLabel(c.interval) : answer}</div>}
           {c.kind === 'meet' && <Keyboard notes={(c.chord ? triad(expected) : c.items).map((id) => spell(itemNote(id)))} />}
+          {/* 3rds are told apart by counting keys, so the two keys are shown to count on. */}
+          {c.third && tapToAnswer && <Keyboard notes={c.items.map((id) => spell(itemNote(id)))} labels={['start', 'end']} />}
           {c.kind === 'meet' && c.chord && (
             <button className="btn btn-quiet hear-it" onClick={() => hearChord(target)}>
               🔊 Hear it
