@@ -85,8 +85,11 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   with a dragon item that can't be bought (Crystal and Ember colours, a golden halo, star glasses,
   a champion medal) plus 150 gems. Never the same one twice; once all are found it's 300 gems. The
   shop shows them as "???" until found, and the odds are listed with the other chests.
-- **Fits the screen**: lessons, mini-lessons and results fit on one iPad screen with no scrolling,
-  in portrait and landscape (side by side in landscape).
+- **Fits the screen**: lessons, mini-lessons and results fit on one screen with no scrolling: on
+  iPad in portrait and landscape (side by side in landscape), and on iPhone in portrait (checked
+  down to the iPhone SE's 375×667). iPhones are locked to portrait: a phone on a piano's music
+  stand stands upright, and landscape leaves too little height. On a phone the on-screen piano's
+  keys are narrow, so the real piano is the better way to play there.
 - **Mini-lessons** (📖 on the path): 20 short explainers placed just before the lessons that need
   them. They cover the staff, counting from landmarks, FACE and Every Good Boy, the bass clef and its
   spaces, the grand staff, ledger lines, steps, skips, leaps and octaves, semitones, sharps, flats and

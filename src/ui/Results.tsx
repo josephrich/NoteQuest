@@ -96,7 +96,7 @@ export function Results({ data, go }: { data: ResultsData; go: (s: Screen) => vo
   const day = today(progress, new Date());
   const goal = goalMs(progress);
   const tough = !data.guide && data.accuracy < TRY_AGAIN_BELOW;
-  const tricky = (data.tricky ?? []).map(improvedName);
+  const tricky = [...new Set((data.tricky ?? []).map(improvedName))];
 
   // Straight back into the same lesson. Starting the microphone needs this tap.
   const tryAgain = async () => {

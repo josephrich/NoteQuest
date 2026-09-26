@@ -88,11 +88,12 @@ export function Home({ go }: { go: (s: Screen) => void }) {
         <button className="pill pill-player" title="Switch player" onClick={() => go({ name: 'players' })}>
           👤 {progress.profile!.name}
         </button>
-        <button className="btn btn-shop" onClick={() => go({ name: 'shop' })}>
-          🛍️ Shop
+        {/* On a phone the words are hidden to fit; the icons stay. */}
+        <button className="btn btn-shop" onClick={() => go({ name: 'shop' })} aria-label="Shop">
+          🛍️<span className="wide-only"> Shop</span>
         </button>
-        <button className="btn btn-quiet" onClick={() => go({ name: 'parent' })}>
-          ⚙︎ Grown-ups
+        <button className="btn btn-quiet" onClick={() => go({ name: 'parent' })} aria-label="Grown-ups">
+          ⚙︎<span className="wide-only"> Grown-ups</span>
         </button>
       </header>
 
