@@ -1,7 +1,7 @@
 // Turn a stream of analysis frames into discrete "the player played X" events.
 // Pure logic (no Web Audio), so it can be tested in Node with synthetic frames.
 import { freqToMidiFloat } from './music';
-import { verifyChord, type ChordCheck } from './chord';
+import { verifyChord, whichNotesAt, type ChordCheck } from './chord';
 import type { Pitch } from './pitch';
 
 // Detects the attack of a new piano note from a jump in short-window RMS.
@@ -315,4 +315,85 @@ function nearMisses(chord: number[]): number[][] {
     }
   });
   return out;
+}
+
+// Which of a set of notes have been played, one at a time or together (see whichNotes). Keeps
+// listening for a few seconds after each attack, from the average of the last few frames, so a
+// note added while others ring on is still found even when its attack doesn't stand out. Reports
+// each note once, when it's first found.
+//
+// To tell piano from talking: a note must be found twice, at least `steadyMs` apart (a voice's
+// pitch wanders), and the sound must be dying away as a struck string does, not swelling or holding
+// like a voice.
+export class NoteSetTracker {
+  refA4: number;
+  private readonly sampleRate: number;
+  private readonly fftSize: number;
+  private readonly startMs: number;
+  private readonly windowFrames: number;
+  private readonly watchMs: number;
+  private readonly steadyMs: number;
+  private candidates: number[] = [];
+  private found = new Set<number>();
+  // Notes found but not yet confirmed: when first found, and at what exact pitch.
+  private seen = new Map<number, { t: number; freq: number }>();
+  private lastOnsetT = -Infinity;
+  private recent: ArrayLike<number>[] = [];
+  private levels: { t: number; rms: number }[] = [];
+
+  private readonly maxDriftCents: number;
+
+  constructor({ refA4 = 440, sampleRate = 48000, fftSize = 8192, startMs = 40, windowFrames = 5, watchMs = 3000, steadyMs = 90, maxDriftCents = 6 } = {}) {
+    this.maxDriftCents = maxDriftCents;
+    this.refA4 = refA4;
+    this.sampleRate = sampleRate;
+    this.fftSize = fftSize;
+    this.startMs = startMs;
+    this.windowFrames = windowFrames;
+    this.watchMs = watchMs;
+    this.steadyMs = steadyMs;
+  }
+
+  setCandidates(midis: number[]): void {
+    this.candidates = midis;
+    this.found = new Set();
+    this.seen = new Map();
+    this.recent = [];
+    this.levels = [];
+    this.lastOnsetT = -Infinity;
+  }
+
+  // Newly found notes, or null.
+  update({ t, onset, mags, rms = 0 }: { t: number; onset: boolean; mags: ArrayLike<number>; rms?: number }): number[] | null {
+    this.levels.push({ t, rms });
+    this.levels = this.levels.filter((l) => t - l.t <= 300);
+    if (onset) {
+      this.lastOnsetT = t;
+      this.recent = [];
+    }
+    if (!this.candidates.length || t - this.lastOnsetT > this.watchMs || t - this.lastOnsetT < this.startMs) return null;
+    this.recent.push(Float64Array.from(mags));
+    if (this.recent.length > this.windowFrames) this.recent.shift();
+    if (this.recent.length < 3) return null;
+    const avg = new Float64Array(this.recent[0].length);
+    for (const m of this.recent) for (let i = 0; i < avg.length; i++) avg[i] += m[i] / this.recent.length;
+    const now = whichNotesAt(avg, this.sampleRate, this.fftSize, this.candidates, { refA4: this.refA4 });
+    const cents = (a: number, b: number) => Math.abs(1200 * Math.log2(a / b));
+    // Forget notes that dropped out, or whose pitch moved (a voice), before they were confirmed.
+    for (const [m, s] of [...this.seen]) {
+      const n = now.find((x) => x.midi === m);
+      // Low notes can't be measured as finely (the frequency bins are coarser there), so allow more.
+      const allowed = Math.max(this.maxDriftCents, 1200 * Math.log2(1 + (0.2 * this.sampleRate) / this.fftSize / s.freq));
+      if (!n || cents(n.freq, s.freq) > allowed) this.seen.delete(m);
+    }
+    for (const n of now) if (!this.seen.has(n.midi)) this.seen.set(n.midi, { t, freq: n.freq });
+    const peak = Math.max(...this.levels.map((l) => l.rms));
+    const fading = rms > 0 && rms <= 0.95 * peak;
+    const fresh = now
+      .map((n) => n.midi)
+      .filter((m) => !this.found.has(m) && this.seen.has(m) && t - this.seen.get(m)!.t >= this.steadyMs && (fading || rms === 0));
+    if (!fresh.length) return null;
+    fresh.forEach((m) => this.found.add(m));
+    return fresh;
+  }
 }

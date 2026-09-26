@@ -207,10 +207,15 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
   // note on the staff, green. Just for exploring: it never holds him up.
   const keyMidis = card.kind !== 'play' && card.keys ? card.keys.notes.map((n) => toMidi(parseNote(n))) : [];
   const touch = (midi: number) => {
-    if (!keyMidis.includes(midi) || touched.includes(midi)) return;
-    sfx.correct();
-    setTouched((t) => [...t, midi]);
+    if (!keyMidis.includes(midi)) return;
+    setTouched((t) => {
+      if (t.includes(midi)) return t;
+      sfx.correct();
+      return [...t, midi];
+    });
   };
+  // Single notes through the note detector; several at once (a chord, or a note added while
+  // others ring) through the note-set detector, which only listens for this card's keys.
   useEffect(() => {
     if (!mic || !keyMidis.length) return;
     return listener.onNote(
@@ -221,6 +226,13 @@ export function GuideScreen({ lessonId, mic, onScreen = false, go }: { lessonId:
       { sure: true },
     );
   });
+  const touchRef = useRef(touch);
+  touchRef.current = touch;
+  const keyList = keyMidis.join(',');
+  useEffect(() => {
+    if (!mic || !keyList) return;
+    return listener.listenForNotes(keyList.split(',').map(Number), (found) => found.forEach((m) => touchRef.current(m)));
+  }, [mic, keyList, index]);
   const allTouched = keyMidis.length > 0 && keyMidis.every((m) => touched.includes(m));
 
   const quit = () => {

@@ -8,7 +8,7 @@ import './ui/app.css';
 
 // Test hook: with ?debug in the URL, window.__nq.note(midi) simulates playing a note.
 if (new URLSearchParams(location.search).has('debug')) {
-  (window as unknown as { __nq: unknown }).__nq = { note: (midi: number) => listener.simulate(midi), chord: (midis: number[]) => listener.simulateChord(midis), micOn: () => listener.running };
+  (window as unknown as { __nq: unknown }).__nq = { note: (midi: number) => listener.simulate(midi), chord: (midis: number[]) => listener.simulateChord(midis), notes: (midis: number[]) => listener.simulateNotes(midis), micOn: () => listener.running };
 }
 
 // Load saved progress first (native storage is asynchronous), then start the app.

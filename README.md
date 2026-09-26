@@ -69,6 +69,10 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   bottom note; pairs of notes say the jump ("From E, go a skip up").
 - **Play along in mini-lessons**: on cards that show notes and purple keys, playing a note (on the
   piano, or tapping the key in the picture) turns that key, and the note on the staff, green.
+  Notes can be played one at a time or together as a chord: a note-set detector
+  (`NoteSetTracker`) checks which of the card's keys are sounding, keeps listening while notes are
+  added, and needs each note's pitch to hold steady while the sound dies away like a struck string
+  (so talking rarely counts: 2 of 60 synthetic voices in tests).
 - **Four tries**: a wrong note can be tried again. After 3 misses a hint appears; after 4 the answer
   is shown and the lesson moves on. In a run of notes he gets 6 goes at each note (hint after 3)
   before it's shown and the run carries on from the next one.

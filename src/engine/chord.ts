@@ -113,3 +113,59 @@ export function verifyChord(
   unexplained.sort((a, b) => b.ratio - a.ratio);
   return { pass, explained, presence, unexplained: unexplained.slice(0, 4), chroma: chroma(peaks, refA4) };
 }
+
+// Which of `candidates` are sounding: for playing along with keys shown in a mini-lesson, where he
+// may play them one at a time or all together. A candidate counts when its own fundamental is
+// there (weak bass fundamentals need less), and not if it's just an overtone of a lower candidate
+// that is sounding (C5 over a played C4), unless it's strong. And the sound as a whole must be
+// explained by the notes found, so talking or other notes don't count.
+export function whichNotes(...args: Parameters<typeof whichNotesAt>): number[] {
+  return whichNotesAt(...args).map((n) => n.midi);
+}
+
+// As whichNotes, with the measured frequency of each note found.
+export function whichNotesAt(
+  mags: Spectrum,
+  sampleRate: number,
+  fftSize: number,
+  candidates: number[],
+  { refA4 = 440, minPresence = 0.08, minLowPresence = 0.04, minExplained = 0.65, maxHarmonic = 8 } = {},
+): { midi: number; freq: number }[] {
+  const { peaks, max } = findPeaks(mags, sampleRate, fftSize);
+  if (!peaks.length || max <= 0) return [];
+  const peakAt = (m: number) => {
+    const f0 = midiToFreq(m, refA4);
+    let best: Peak | null = null;
+    for (const p of peaks) if (Math.abs(centsBetween(p.freq, f0)) <= 40 && (!best || p.mag > best.mag)) best = p;
+    return best;
+  };
+  const strength = (m: number) => (peakAt(m)?.mag ?? 0) / max;
+  const found: number[] = [];
+  for (const m of [...candidates].sort((a, b) => a - b)) {
+    const s = strength(m);
+    if (s < (m < 48 ? minLowPresence : minPresence)) continue;
+    // An overtone of a lower note that's sounding only counts if it's louder than that note: then
+    // it's been played too.
+    const under = found.find((k) => {
+      const ratio = midiToFreq(m, refA4) / midiToFreq(k, refA4);
+      const h = Math.round(ratio);
+      return h >= 2 && Math.abs(centsBetween(ratio, h)) <= 30;
+    });
+    if (under !== undefined && s <= strength(under)) continue;
+    found.push(m);
+  }
+  if (!found.length) return [];
+  const f0s = found.map((m) => midiToFreq(m, refA4));
+  let explained = 0;
+  let total = 0;
+  for (const p of peaks) {
+    const power = p.mag * p.mag;
+    total += power;
+    if (f0s.some((f0) => {
+      const h = Math.round(p.freq / f0);
+      return h >= 1 && h <= maxHarmonic && Math.abs(centsBetween(p.freq, h * f0)) <= 35 + 6 * h;
+    }))
+      explained += power;
+  }
+  return total > 0 && explained / total >= minExplained ? found.map((m) => ({ midi: m, freq: peakAt(m)!.freq })) : [];
+}

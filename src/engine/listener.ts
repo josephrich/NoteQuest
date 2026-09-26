@@ -2,7 +2,7 @@
 // One Listener lives for the whole app session; screens subscribe to what they need.
 import { Mic, FFT_SIZE } from './audio';
 import { detectPitch, type Pitch } from './pitch';
-import { OnsetDetector, NoteTracker, ChordTracker, type NoteEvent, type ChordEvent } from './trackers';
+import { OnsetDetector, NoteTracker, ChordTracker, NoteSetTracker, type NoteEvent, type ChordEvent } from './trackers';
 
 export interface LiveLevel {
   rms: number;
@@ -23,6 +23,8 @@ export class Listener {
   private chordSubs = new Set<ChordListener>();
   private levelSubs = new Set<LevelListener>();
   private chordTarget: number[] | null = null;
+  private noteSet = new NoteSetTracker();
+  private noteSetSubs = new Set<(midis: number[]) => void>();
   private chordAlternatives: number[][] = [];
   private raf = 0;
   private frame = 0;
@@ -47,6 +49,7 @@ export class Listener {
     this.refA4 = ref;
     this.notes.refA4 = ref;
     this.chords.refA4 = ref;
+    this.noteSet.refA4 = ref;
   }
 
   // Call from a tap handler. Safe to call repeatedly.
@@ -59,6 +62,7 @@ export class Listener {
           this.onsets = new OnsetDetector();
           this.notes = new NoteTracker({ refA4: this.refA4 });
           this.chords = new ChordTracker({ refA4: this.refA4, sampleRate: this.mic.sampleRate, fftSize: FFT_SIZE });
+          this.noteSet = new NoteSetTracker({ refA4: this.refA4, sampleRate: this.mic.sampleRate, fftSize: FFT_SIZE });
           if (this.chordTarget) this.chords.setTarget(this.chordTarget, this.chordAlternatives);
           document.addEventListener('visibilitychange', this.onVisibility);
           this.loop();
@@ -106,6 +110,17 @@ export class Listener {
     };
   }
 
+  // Listen for any of these notes, played alone or together (see NoteSetTracker): each is reported
+  // once, when first heard. Pass null to stop.
+  listenForNotes(midis: number[] | null, fn?: (found: number[]) => void): () => void {
+    this.noteSet.setCandidates(midis ?? []);
+    if (fn) this.noteSetSubs.add(fn);
+    return () => {
+      if (fn) this.noteSetSubs.delete(fn);
+      this.noteSet.setCandidates([]);
+    };
+  }
+
   // Stop reporting notes (e.g. while reading aloud), and start again shortly after release, once
   // the voice has died away.
   hold(): void {
@@ -126,6 +141,11 @@ export class Listener {
     const ev: NoteEvent = { midi, cents: 0, freq: 440 * 2 ** ((midi - 69) / 12), onsetT: t, t, stage: 'heard' };
     this.emitNote(ev);
     this.emitNote({ ...ev, stage: 'sure' });
+  }
+
+  // Pretend several notes were played together (automated tests).
+  simulateNotes(midis: number[]): void {
+    this.noteSetSubs.forEach((fn) => fn(midis));
   }
 
   // Pretend a chord was played (automated tests): it passes if it's the chord being listened for.
@@ -172,6 +192,10 @@ export class Listener {
       // As with notes, nothing is reported while the app is talking or playing a chord itself.
       const chordEvent = this.chords.update({ t: f.t, onset: onset && !this.held, mags: f.mags });
       if (chordEvent && !this.held) this.chordSubs.forEach((fn) => fn(chordEvent));
+    }
+    if (this.noteSetSubs.size) {
+      const found = this.noteSet.update({ t: f.t, onset: onset && !this.held, mags: f.mags, rms: f.rms });
+      if (found && !this.held) this.noteSetSubs.forEach((fn) => fn(found));
     }
     if (this.frame++ % 3 === 0 && this.levelSubs.size) {
       const level = { rms: f.rms, pitch, gate: this.onsets.gate };
