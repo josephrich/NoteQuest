@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { type ChestRoll, type Rarity } from '../game/rewards';
 import { findItem } from '../game/shop';
 import { Dragon } from './Dragon';
+import { useProgress } from './store';
 import { sfx } from './sound';
 
 export const RARITY_STYLE: Record<Rarity, { color: string; label: string }> = {
@@ -52,6 +53,8 @@ export function Chest({ roll, totalAfter, onOpened }: { roll: ChestRoll; totalAf
   const timers = useRef<number[]>([]);
   const style = RARITY_STYLE[state === 'open' ? roll.rarity : flicker];
   const treasure = roll.item ? findItem(roll.item) : undefined;
+  // The treasure is shown on the player's own dragon.
+  const { shop } = useProgress().progress;
   const sparks = useMemo(
     () =>
       Array.from({ length: roll.rarity === 'treasure' ? 30 : roll.rarity === 'legendary' ? 22 : roll.rarity === 'epic' ? 16 : 11 }, () => {
@@ -128,8 +131,8 @@ export function Chest({ roll, totalAfter, onOpened }: { roll: ChestRoll; totalAf
                 <Dragon
                   size={96}
                   mood="cheer"
-                  skin={treasure.kind === 'skin' ? treasure.id : undefined}
-                  outfit={treasure.kind === 'accessory' ? { [treasure.slot]: treasure.id } : {}}
+                  skin={treasure.kind === 'skin' ? treasure.id : shop.skin}
+                  outfit={treasure.kind === 'accessory' ? { ...shop.outfit, [treasure.slot]: treasure.id } : shop.outfit}
                 />
                 <div>
                   You found the <strong>{treasure.name}</strong>! It can't be bought: only found. Try it on in the shop.

@@ -123,3 +123,26 @@ There are no accounts, purchases, ads or links out of the app. Treasure chests c
 
 The read-aloud voice was pre-recorded with an AI text-to-speech service and is disclosed in the description.
 ```
+
+## Screenshots and app preview
+
+Ready to upload, in `store-media/`:
+
+- `iphone-6.9/`: 8 screenshots, 1320 × 2868 (the 6.9" iPhone size; App Store Connect scales them for smaller iPhones).
+- `ipad-13/`: 8 screenshots, 2064 × 2752 (the 13" iPad size; scaled for other iPads).
+- `preview/`: a 24-second app preview for each: iPhone 886 × 1920 and iPad 1200 × 1600, H.264 at 30 fps with 256 kbps AAC stereo.
+
+Upload the screenshots in their numbered order: the first three show in search results.
+
+1. Play it on your real piano. (A run of notes, part-played.)
+2. A little practice, every day. (Home: streak, daily goal, Daily Review.)
+3. Earn gems. Find rare treasure. (A treasure chest.)
+4. From first notes to chords. (Meeting A minor.)
+5. Learn the why, not just the what. (The major and minor 3rds mini-lesson.)
+6. Treble and bass clef, note by note.
+7. Make the dragon your own. (The shop.)
+8. Grown-ups see real progress. (Practice chart and reading speed per note.)
+
+The player "Mia" and her progress are made up for the screenshots. The video is the real app, recorded with simulated piano notes. Its soundtrack is synthesised piano, the app's own sound effects and read-aloud voice, and a simple music bed made for it, so there is nothing to license.
+
+In App Store Connect, set the preview's poster frame to a moment inside the app (around 5 seconds, the run of notes) rather than the title card.
