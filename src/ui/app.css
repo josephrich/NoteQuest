@@ -568,3 +568,7 @@ button.pill { font: inherit; font-weight: 800; cursor: pointer; }
 @media (orientation: landscape) and (max-height: 900px) {
   .results .tiles { grid-template-columns: repeat(2, 1fr); }
 }
+.keyboard text { pointer-events: none; }
+.keyboard-tap { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.explore-hint { margin: 0; font-weight: 800; color: var(--learn); font-size: 1.05rem; text-align: center; }
+.hint { color: var(--learn); font-size: 1.1rem; max-width: 560px; text-align: center; line-height: 1.35; }

@@ -455,3 +455,63 @@ export const REVIEW_ID = 'review';
 
 // Lessons in play order, used to work out which one is unlocked next.
 export const LESSON_ORDER: string[] = UNITS.flatMap((u) => u.lessons.map((l) => l.id));
+
+// ---- Hints -----------------------------------------------------------------------------------
+// When he's stuck on a note, the hint doesn't give the name away: it shows him how to find it, the
+// way the course teaches. The nearest landmark is drawn on the staff (in purple), and he counts
+// from there.
+
+// Landmarks for hints: the course's landmarks, plus the outer staff lines for notes beyond them.
+const HINT_LANDMARKS: Record<ItemId, { name: string; where: string }> = {
+  'treble:C4': { name: 'middle C', where: 'Middle C sits on its own little line, just below the treble staff.' },
+  'treble:G4': { name: 'G, on the G line', where: 'The treble clef curls around the 2nd line up: that line is G.' },
+  'treble:C5': { name: 'treble C', where: 'Treble C is in the 3rd space up, right in the middle of the staff.' },
+  'treble:F5': { name: 'F, the top line', where: 'The top line of the treble staff is F.' },
+  'bass:C4': { name: 'middle C', where: 'Middle C sits on its own little line, just above the bass staff.' },
+  'bass:F3': { name: 'F, on the F line', where: "The bass clef's two dots hug the 4th line up: that line is F." },
+  'bass:C3': { name: 'bass C', where: 'Bass C is in the 2nd space up.' },
+  'bass:G2': { name: 'G, the bottom line', where: 'The bottom line of the bass staff is G.' },
+};
+
+export interface NoteHint {
+  text: string;
+  // The landmark to draw on the staff, if the note isn't one itself.
+  landmark?: ItemId;
+}
+
+export function noteHint(id: ItemId): NoteHint {
+  const n = itemNote(id);
+  const plain = `${itemClef(id)}:${LETTERS[n.letter]}${n.octave}`;
+  const sign =
+    n.acc === 1
+      ? ' Then the ♯ takes it one key to the right.'
+      : n.acc === -1
+        ? ' Then the ♭ takes it one key to the left.'
+        : n.natural
+          ? ' The ♮ means the plain white key.'
+          : '';
+  if (HINT_LANDMARKS[plain]) return { text: HINT_LANDMARKS[plain].where + sign };
+  const pos = staffPosition(n);
+  let best: { id: ItemId; dist: number } | null = null;
+  for (const lm of Object.keys(HINT_LANDMARKS)) {
+    if (itemClef(lm) !== itemClef(id)) continue;
+    const dist = pos - staffPosition(itemNote(lm));
+    if (!best || Math.abs(dist) < Math.abs(best.dist)) best = { id: lm, dist };
+  }
+  const steps = Math.abs(best!.dist);
+  const dir = best!.dist > 0 ? 'up' : 'down';
+  const count = steps === 1 ? `1 step ${dir} from it: the very next line or space.` : `${steps} steps ${dir} from it: count each line and space.`;
+  const text = `The purple note is ${HINT_LANDMARKS[best!.id].name}. Your note is ${count}${sign}`;
+  return { text, landmark: best!.id };
+}
+
+// For a chord: find the bottom note, then stack the 3rd and 5th.
+export function chordHint(ref: ChordRef): NoteHint {
+  const root = chordRoot(ref);
+  const bottom = noteHint(root);
+  const sharp = triad(ref).some((id) => itemNote(id).acc !== 0);
+  return {
+    text: `Find the bottom note first. ${bottom.text} Then stack two skips on top${sharp ? ', and watch the ♯' : ''}.`,
+    landmark: bottom.landmark,
+  };
+}

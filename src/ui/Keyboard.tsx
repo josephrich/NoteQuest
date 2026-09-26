@@ -14,7 +14,24 @@ const MIDDLE_C = 60;
 const PAD = 3;
 const MIN_KEYS = 15;
 
-export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]; labels?: (string | undefined)[]; color?: string }) {
+const DONE = '#2fbf71';
+
+// `done`: lit keys he has played (MIDI numbers), shown green. `onPress`: makes the keys tappable.
+export function Keyboard({
+  notes,
+  labels,
+  color = '#7c5cff',
+  done = [],
+  onPress,
+}: {
+  notes: string[];
+  labels?: (string | undefined)[];
+  color?: string;
+  done?: number[];
+  onPress?: (midi: number) => void;
+}) {
+  const fill = (midi: number) => (done.includes(midi) ? DONE : color);
+  const press = (midi: number) => (onPress ? { onPointerDown: (e: React.PointerEvent) => (e.preventDefault(), onPress(midi)), style: { cursor: 'pointer' } } : {});
   const parsed = notes.map(parseNote);
   // White keys are counted as octave * 7 + letter. Show a few keys either side of the lit ones, and
   // at least MIN_KEYS in all, centred on them.
@@ -45,12 +62,12 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
   const height = WHITE_H + (hasLabels ? LABEL_H : 0) + 4;
 
   return (
-    <svg className="keyboard" viewBox={`-1 -1 ${width + 2} ${height}`} role="img" aria-label={`Piano keys: ${notes.join(', ')}`}>
+    <svg className={`keyboard ${onPress ? 'keyboard-tap' : ''}`} viewBox={`-1 -1 ${width + 2} ${height}`} role="img" aria-label={`Piano keys: ${notes.join(', ')}`}>
       {whites.map((k, i) => {
         const on = lit.has(k.midi);
         return (
           <g key={k.midi}>
-            <rect x={i * WHITE_W} y={0} width={WHITE_W} height={WHITE_H} rx={3} fill={on ? color : '#fff'} stroke="#3b3355" strokeWidth={1.5} />
+            <rect x={i * WHITE_W} y={0} width={WHITE_W} height={WHITE_H} rx={3} fill={on ? fill(k.midi) : '#fff'} stroke="#3b3355" strokeWidth={1.5} {...press(k.midi)} />
             {on && (
               <text x={i * WHITE_W + WHITE_W / 2} y={WHITE_H - 10} textAnchor="middle" fontSize={15} fontWeight={800} fill="#fff">
                 {LETTERS[k.letter]}
@@ -62,7 +79,16 @@ export function Keyboard({ notes, labels, color = '#7c5cff' }: { notes: string[]
       {whites.map((k, i) =>
         HAS_BLACK.has(k.letter) && i < whites.length - 1 ? (
           <g key={`b${k.midi}`}>
-            <rect x={(i + 1) * WHITE_W - BLACK_W / 2} y={0} width={BLACK_W} height={BLACK_H} rx={2} fill={lit.has(k.midi + 1) ? color : '#2b2340'} stroke="#2b2340" />
+            <rect
+              x={(i + 1) * WHITE_W - BLACK_W / 2}
+              y={0}
+              width={BLACK_W}
+              height={BLACK_H}
+              rx={2}
+              fill={lit.has(k.midi + 1) ? fill(k.midi + 1) : '#2b2340'}
+              stroke="#2b2340"
+              {...press(k.midi + 1)}
+            />
             {lit.has(k.midi + 1) && (
               <text x={(i + 1) * WHITE_W} y={BLACK_H - 8} textAnchor="middle" fontSize={9} fontWeight={800} fill="#fff">
                 {noteName(parsed[lit.get(k.midi + 1)!])}

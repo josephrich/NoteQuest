@@ -61,6 +61,14 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the product plan and roadmap, and
   of notes and longer ones: runs of 3, then 4, then 5 notes, and interval melodies of 4, 5, then 6.
   The Daily Review follows the same level and, once he knows them, mixes in interval melodies and
   chords. Lessons that bring in notes he hasn't met yet stay a step gentler.
+- **Hints that teach**: after 3 misses the hint never just names the note. It shows how to find
+  it the way the course teaches: the nearest landmark (middle C, the G line, the F line, treble or
+  bass C, or the top or bottom line) is drawn in purple on the staff, with "Your note is 2 steps up
+  from it". A landmark note gets its landmark rule ("The treble clef curls around the 2nd line up:
+  that line is G"). Sharps and flats add which way the sign moves it; chords start from the
+  bottom note; pairs of notes say the jump ("From E, go a skip up").
+- **Play along in mini-lessons**: on cards that show notes and purple keys, playing a note (on the
+  piano, or tapping the key in the picture) turns that key, and the note on the staff, green.
 - **Four tries**: a wrong note can be tried again. After 3 misses a hint appears; after 4 the answer
   is shown and the lesson moves on. In a run of notes he gets 6 goes at each note (hint after 3)
   before it's shown and the run carries on from the next one.

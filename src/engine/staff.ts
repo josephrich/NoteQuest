@@ -15,6 +15,9 @@ export interface StaffSpec {
   // sit compared with the right ones.
   ghosts?: (Note[] | undefined)[];
   ghostColor?: string;
+  // Optional landmark notes drawn in a group for a hint (e.g. middle C, in purple).
+  marks?: (Note[] | undefined)[];
+  markColor?: string;
   // Optional colour for each note of a group (in the order given), e.g. green for a chord's notes he
   // got right. Overrides the group's colour.
   keyColors?: ((string | undefined)[] | undefined)[];
@@ -49,12 +52,17 @@ function makeNote(
     labelAbove?: boolean;
     ghosts?: Note[];
     ghostColor?: string;
+    marks?: Note[];
+    markColor?: string;
     keyColors?: (string | undefined)[];
   },
 ) {
-  // VexFlow wants a chord's notes from low to high; any ghosts go in with them.
+  // VexFlow wants a chord's notes from low to high; any ghosts or marks go in with them (unless
+  // they're already there).
+  const same = (a: Note, b: Note) => a.letter === b.letter && a.octave === b.octave && a.acc === b.acc;
   const ghosts = opts.ghosts ?? [];
-  const group = [...notes, ...ghosts].sort((a, b) => a.octave * 7 + a.letter - (b.octave * 7 + b.letter) || a.acc - b.acc);
+  const marks = (opts.marks ?? []).filter((m) => ![...notes, ...ghosts].some((x) => same(x, m)));
+  const group = [...notes, ...ghosts, ...marks].sort((a, b) => a.octave * 7 + a.letter - (b.octave * 7 + b.letter) || a.acc - b.acc);
   const n = new StaveNote({ clef, keys: group.map(vexKey), duration: opts.single ? 'w' : 'q', align_center: opts.single });
   // With a key signature showing, notes that follow it need no accidental.
   group.forEach((g, j) => {
@@ -72,6 +80,7 @@ function makeNote(
   };
   notes.forEach((note, i) => opts.keyColors?.[i] && styleKey(note, opts.keyColors[i]!));
   ghosts.forEach((g) => styleKey(g, opts.ghostColor ?? '#aaa'));
+  marks.forEach((m) => styleKey(m, opts.markColor ?? '#7c5cff'));
   if (opts.label) {
     const a = new Annotation(opts.label).setVerticalJustification(opts.labelAbove ? Annotation.VerticalJustify.TOP : Annotation.VerticalJustify.BOTTOM);
     a.setFont('Arial', 13, 'bold');
@@ -118,6 +127,8 @@ export function renderStaff(el: HTMLElement, spec: StaffSpec): void {
       label: spec.labels?.[i],
       ghosts: spec.ghosts?.[i],
       ghostColor: spec.ghostColor,
+      marks: spec.marks?.[i],
+      markColor: spec.markColor,
       keyColors: spec.keyColors?.[i],
     }),
   );

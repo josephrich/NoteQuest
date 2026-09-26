@@ -92,3 +92,25 @@ describe('where a lesson sits', () => {
     expect(lessonPosition('treble-1')).toBe('Unit 1 · Lesson 1 of 7');
   });
 });
+
+describe('hints', () => {
+  test('every course note gets a hint that shows how to find it, never just its name', async () => {
+    const { UNITS, noteHint, itemClef } = await import('./content');
+    const ids = new Set(UNITS.flatMap((u) => u.lessons.flatMap((l) => (l.chords ? [] : l.pool))));
+    for (const id of ids) {
+      const h = noteHint(id);
+      expect(h.text, id).not.toMatch(/it's [A-G]/);
+      if (h.landmark) {
+        expect(itemClef(h.landmark)).toBe(itemClef(id));
+        const steps = Number(/(\d+) steps?/.exec(h.text)?.[1]);
+        expect(steps, `${id}: ${h.text}`).toBeLessThanOrEqual(4);
+      }
+    }
+    expect(noteHint('treble:A4')).toEqual({
+      text: 'The purple note is G, on the G line. Your note is 1 step up from it: the very next line or space.',
+      landmark: 'treble:G4',
+    });
+    expect(noteHint('treble:C4').landmark).toBeUndefined();
+    expect(noteHint('treble:F#4').text).toMatch(/♯ takes it one key to the right/);
+  });
+});

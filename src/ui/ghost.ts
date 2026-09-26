@@ -4,6 +4,8 @@ import { midiName, parseNote, type Clef, type Note } from '../engine/music';
 import { keyboardKeys } from './PlayKeyboard';
 
 export const GHOST_COLOR = 'rgba(80, 70, 105, 0.55)';
+// A landmark shown for a hint.
+export const MARK_COLOR = 'rgba(124, 92, 255, 0.75)';
 
 // Within reach of the staff: the on-screen keyboard's range for that clef.
 export function inReach(clef: Clef, midi: number): boolean {

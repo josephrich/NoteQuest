@@ -5,7 +5,7 @@ import { MyDragon } from './MyDragon';
 import { ModeBanner } from './ModeBanner';
 import { Keyboard } from './Keyboard';
 import { PlayKeyboard } from './PlayKeyboard';
-import { GHOST_COLOR, ghostLine, ghostNote, inReach } from './ghost';
+import { GHOST_COLOR, MARK_COLOR, ghostLine, ghostNote, inReach } from './ghost';
 import { SpeakButton } from './SpeakButton';
 import { PROMPTS } from '../voice/lines';
 import { spell } from '../engine/music';
@@ -15,6 +15,7 @@ import { praise, lightning as lightningLine, encourage } from './lines';
 import { hearChord } from './pianoSound';
 import {
   INTERVAL_TIPS,
+  chordHint,
   chordName,
   chordTip,
   findLesson,
@@ -26,6 +27,7 @@ import {
   thirdQuality,
   itemMidi,
   itemNote,
+  noteHint,
   noteTip,
   triad,
   type ItemId,
@@ -253,12 +255,22 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
       : c.kind === 'interval'
         ? intervalWord(c.interval!)
         : fullAnswer;
-  const [n1, n2, n3] = c.chord ? triad(expected).map(itemName) : [];
-  const hint = c.chord ? `${n1}, ${n2} and ${n3}` : `it's ${answer}`;
+  const [n1] = c.chord ? triad(expected).map(itemName) : [];
+  // After a few misses: how to find it (from a landmark, drawn in purple), not what it is. In a
+  // pair of notes with the first given, the jump itself is the hint.
+  const prevItem = run.step > 0 ? c.items[run.step - 1] : null;
+  const hintInfo: { text: string; landmark?: ItemId } =
+    c.interval && prevItem && !c.chord
+      ? { text: `From ${itemName(prevItem)}, go ${intervalWord(c.interval)} ${itemMidi(expected) > itemMidi(prevItem) ? 'up' : 'down'}.` }
+      : c.chord
+        ? chordHint(expected)
+        : noteHint(expected);
   const target = c.chord ? chordMidis(expected) : [];
   // Where the wrong note he played sits, drawn faintly in the column of the note he's on.
   const ghostMidi = !c.chord && wrong?.midi !== undefined && !wrong.revealed && (run.phase === 'asking' || run.phase === 'reveal') ? wrong.midi : undefined;
-  const ghostShown = ghostMidi !== undefined && inReach(clef, ghostMidi);
+  const showHint = c.kind !== 'meet' && run.tries >= HINT_AFTER && run.phase === 'asking';
+  // Once the hint shows its landmark, that's the guide; the grey ghost would only crowd it.
+  const ghostShown = ghostMidi !== undefined && inReach(clef, ghostMidi) && !showHint;
   const at = Math.min(run.step, c.items.length - 1);
   // A chord he got partly right: its right notes in green, and the wrong ones he played in grey.
   const chordMiss = c.chord && wrong?.chordPlayed && run.phase === 'asking' && !wrong.revealed ? wrong.chordPlayed : undefined;
@@ -286,7 +298,9 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
                 ? 'Not quite. The green notes are right; the grey ones need fixing.'
                 : `Not quite. ${encourage()}`
             : ghostMidi !== undefined
-              ? ghostLine(clef, ghostMidi, itemMidi(expected), wrong.heard ?? '')
+              ? showHint
+                ? `That was ${wrong.heard}.`
+                : ghostLine(clef, ghostMidi, itemMidi(expected), wrong.heard ?? '')
               : `Not quite. ${encourage()}`;
 
   return (
@@ -324,6 +338,8 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
             ghosts={ghosts}
             ghostColor={GHOST_COLOR}
             keyColors={keyColors}
+            marks={showHint && hintInfo.landmark ? c.items.map((_, i) => (i === at ? [itemNote(hintInfo.landmark!)] : undefined)) : undefined}
+            markColor={MARK_COLOR}
             current={stepwise && run.phase === 'asking' ? Math.min(run.step, c.items.length - 1) : undefined}
             label={c.items.length > 1 ? `${c.items.length} ${c.chord ? 'chords' : 'notes'}` : c.chord ? chordName(expected) : `${answer}`}
           />
@@ -395,7 +411,7 @@ export function LessonScreen({ lessonId, mic, onScreen = false, go }: { lessonId
                 It starts on <strong>{itemName(c.items[0])}</strong>. {c.third ? 'Then find the 3rd!' : 'Then read the jump!'}
               </p>
             )}
-            {c.kind !== 'meet' && run.tries >= HINT_AFTER && <p className="hint">Hint: {hint}</p>}
+            {showHint && <p className="hint">💡 {hintInfo.text}</p>}
             {c.chord && onScreen && !wrong && <p className="start-hint">Tap all three keys.</p>}
             {c.kind === 'meet' && (
               <button className="btn btn-secondary" onClick={() => react(run.tap(null, performance.now()))}>
