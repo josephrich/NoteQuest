@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#5b3fd1">
   <title>Clefwing Mic Test</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎹</text></svg>">
-  <script type="module" crossorigin src="./assets/micTest-C2PQb2Dm.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/staff-D0N8gc_9.js">
-  <link rel="stylesheet" crossorigin href="./assets/micTest-D3b0-sPA.css">
+  <script type="module" crossorigin src="./assets/micTest-BVMIqfOq.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/staff-D3f-FmJ8.js">
+  <link rel="stylesheet" crossorigin href="./assets/micTest-CVertD6P.css">
 </head>
 <body>
   <header>
@@ -86,8 +86,43 @@
       <p class="hint">Play some deliberately wrong notes too. Tap <strong>"The app judged that wrong"</strong> whenever it marks a right note wrong or accepts a wrong one. That's how we measure accuracy.</p>
     </section>
 
+    <section class="card" aria-labelledby="tim-h">
+      <h2 id="tim-h"><span class="step">4</span> Rhythm timing</h2>
+      <p>Measures how quickly and steadily the app hears notes played in time with a click, before rhythm lessons are built. Each test counts in for one bar (4 clicks), then runs.</p>
+      <div class="row">
+        <label class="check">Tempo
+          <select id="tempo">
+            <option value="60">60</option>
+            <option value="80" selected>80</option>
+            <option value="100">100</option>
+            <option value="120">120</option>
+          </select>
+          beats a minute
+        </label>
+      </div>
+      <div class="timing-tests">
+        <button data-test="along">Play along<span>One note on every click (any key)</span></button>
+        <button data-test="quavers">Quavers, same key<span>Two notes per click, both on the same key</span></button>
+        <button data-test="run">Semiquaver run<span>Four notes per click: C D E F G F E D, over and over</span></button>
+        <button data-test="silent">Click only<span>Don't play: checks the click isn't heard as a note</span></button>
+        <button data-test="tap">Tap the screen<span>Tap the pad below on every click</span></button>
+      </div>
+      <div class="beat-stage">
+        <div id="beat-dot" class="beat-dot" aria-hidden="true"></div>
+        <p id="timing-status" class="feedback" aria-live="polite">Start the microphone first.</p>
+        <button id="tap-pad" class="tap-pad" hidden>Tap here on every click</button>
+      </div>
+      <p class="hint">Do <strong>Play along</strong> at 80 and at 120, <strong>Quavers</strong> and <strong>Semiquaver run</strong> at 60, 80 and 100, <strong>Click only</strong> once, and <strong>Tap the screen</strong> once. Then try Play along with the click in earphones. Then tap Copy results below and send them.</p>
+      <div class="table-wrap">
+        <table id="timing">
+          <thead><tr><th>Test</th><th>Tempo</th><th>Heard</th><th>Extra</th><th>Median offset</th><th>Spread</th><th>Worst</th></tr></thead>
+          <tbody><tr><td colspan="7" class="muted">No timing tests yet.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card" aria-labelledby="res-h">
-      <h2 id="res-h"><span class="step">4</span> Results</h2>
+      <h2 id="res-h"><span class="step">5</span> Results</h2>
       <div class="table-wrap">
         <table id="stats">
           <thead><tr><th>Test</th><th>Audio</th><th>Attempts</th><th>App accuracy</th><th>Octave slips</th><th>Median read time</th><th>Median detect time</th></tr></thead>
